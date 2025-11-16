@@ -19,16 +19,26 @@
 #define RAYLIB_ARCHIVE DOWNLOAD_FOLDER RAYLIB_TAR_FILE
 #define RAYLIB_SRC_DIR DEPENDENCY_FOLDER RAYLIB_DIR_NAME "src/"
 
-
 #define DEBUG
-#define WINDOWS
-// #define LINUX
 
-#define USE_MINGW_MAKE
-// #define USE_MAKE
+#if _WIN32
+#	define WINDOWS
+#	if defined(__GNUC__)
+#		define USE_MINGW_MAKE
+#		define nob_cc(cmd) nob_cmd_append(cmd, "gcc")
+#	elif defined(__clang__)
+#		define nob_cc(cmd) nob_cmd_append(cmd, "clang")
+#	elif defined(_MSC_VER)
+#		define nob_cc(cmd) nob_cmd_append(cmd, "cl.exe")
+#	endif
+#else
+#	define LINUX
+#	define nob_cc(cmd) nob_cmd_append(cmd, "cc")
+#endif
 
-#define USE_GCC gcc
-// #define USE_CLANG clang
+#ifndef USE_MINGW_MAKE
+#	define USE_MAKE
+#endif
 
 void source_files(Nob_Cmd *cmd){
 	nob_cc_inputs(cmd,
@@ -120,11 +130,12 @@ int main(int argc, char **argv){
 	if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) return 1;
 
 	// Compile project
-#if defined(USE_GCC)
-	nob_cmd_append(&cmd, "gcc");
-#else
-	nob_cmd_append(&cmd, "cc");
-#endif
+// #if defined(USE_GCC)
+// 	nob_cmd_append(&cmd, "gcc");
+// #else
+// 	nob_cmd_append(&cmd, "cc");
+// #endif
+	nob_cc(&cmd);
 
 	nob_cc_output(&cmd, BUILD_FOLDER PROJECT_NAME);
 #if defined(DEBUG)
