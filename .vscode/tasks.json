@@ -1,0 +1,68 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "delete build",
+            "type": "shell",
+            "windows": {
+                "command": "if exist .\\build\\${config:executable_name}.exe del /F /Q .\\build\\${config:executable_name}.exe",
+                "options": {
+                    "shell": {
+                        "executable": "cmd.exe",
+                        "args": ["/C"]
+                    }
+                }
+            },
+            "linux": {
+                "command": "rm -f ./build/${config:executable_name}",
+                "options": {
+                    "shell": {
+                        "executable": "/bin/bash",
+                        "args": ["-c"]
+                    }
+                }
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Clear previous build"
+        },
+        {
+            "label": "Build Nob",
+            "type": "shell",
+            "command": "gcc",
+            "args": ["nob.c", "-o", "nob"],
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Build Nob"
+        },
+        {
+            "label": "Nob",
+            "type": "shell",
+            "command": "./nob",
+            "args": [],
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Build with nob"
+        },
+        {
+            "label": "build all",
+            "dependsOn": ["Build Nob", "Nob"],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "re-build",
+            "dependsOn": ["Nob"],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}

@@ -1,0 +1,6 @@
+/build
+/dependencies
+/download
+
+*.exe
+*.old
