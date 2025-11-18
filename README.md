@@ -9,8 +9,12 @@ Only requirements are:
 ```gcc -o nob nob.c```    
 2. Start building project.    
 ```./nob```    
-    Pass `debug` argument for debug build    
+
+## Build options
+- Pass `debug` argument for debug build    
     ```./nob debug```    
+- Pass `project` with `"Your Project Name"` to build executable with your provided name.
+    ```./nob project "Raylib Template"```
 
 ## TODO
 - Add emscriptem builds
@@ -21,3 +25,5 @@ Available debug actions:
 - `(gdb) Rebuild All` initial build / rebuilds everything (nob and project)
 - `(gdb) Build` nob manages rebuilding self and project
 - `(gdb) Nob` debuging nob    
+    
+Modify `.vscode/settings.json` to change used compiler (default:"gcc") and project name (default:"nob_raylib").

@@ -29,7 +29,7 @@
         {
             "label": "Build Nob",
             "type": "shell",
-            "command": "gcc",
+            "command": "${config:CC}",
             "args": ["nob.c", "-o", "nob"],
             "group": "build",
             "problemMatcher": [],
@@ -38,7 +38,7 @@
         {
             "label": "(gdb) Build Nob",
             "type": "shell",
-            "command": "gcc",
+            "command": "${config:CC}",
             "args": ["nob.c", "-o", "nob", "-g"],
             "group": "build",
             "problemMatcher": [],
@@ -48,7 +48,7 @@
             "label": "Nob",
             "type": "shell",
             "command": "./nob",
-            "args": [],
+            "args": ["project", "${config:executable_name}"],
             "group": "build",
             "problemMatcher": [],
             "detail": "Build release with nob"
@@ -57,7 +57,7 @@
             "label": "Nob build debug",
             "type": "shell",
             "command": "./nob",
-            "args": ["debug"],
+            "args": ["debug", "project", "${config:executable_name}"],
             "group": "build",
             "problemMatcher": [],
             "detail": "Build debug with nob"

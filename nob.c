@@ -21,8 +21,8 @@
 #define RAYLIB_ARCHIVE DOWNLOAD_FOLDER RAYLIB_TAR_FILE
 #define RAYLIB_SRC_DIR DEPENDENCY_FOLDER RAYLIB_DIR_NAME "src/"
 
-#define DEBUG
 static bool is_debug;
+static const char *project_name = PROJECT_NAME;
 
 // REDEFINE nob_cc - https://web.archive.org/web/20160308010351/https://beefchunk.com/documentation/lang/c/pre-defined-c/precomp.html
 #undef nob_cc
@@ -88,8 +88,6 @@ int setup_raylib(Nob_Cmd *cmd){
 	// Extract
 	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER RAYLIB_DIR_NAME)) return 1;
 	if (!nob_file_exists(RAYLIB_SRC_DIR "raylib.h")){
-		// const char *extract_cmd = "tar -xzf \"" RAYLIB_ARCHIVE "\" -C \"" DEPENDENCY_FOLDER RAYLIB_DIR_NAME "\" --strip-components=1";
-		// system(extract_cmd);
 		if(extract_tar_archive(RAYLIB_ARCHIVE, DEPENDENCY_FOLDER RAYLIB_DIR_NAME)){
 			return 1;
 		}
@@ -191,6 +189,13 @@ int main(int argc, char **argv){
 		if (strcmp(command_name, "debug") == 0){
 			is_debug = true;
 		}
+		else if (strcmp(command_name, "project") == 0){
+			if (!(argc > 0)){
+				nob_log(NOB_ERROR, "[ERROR] No project name provided after `project`");
+				return 1;
+			}
+			project_name = nob_shift(argv, argc);
+		}
 	}
 
 	if (!nob_mkdir_if_not_exists(DOWNLOAD_FOLDER)) return 1;
@@ -207,11 +212,11 @@ int main(int argc, char **argv){
 	nob_cc(&cmd);
 	if (is_debug){
 		// Place inside build folder
-		nob_cc_output(&cmd, BUILD_FOLDER PROJECT_NAME);
+		nob_cc_output(&cmd, nob_temp_sprintf("%s%s", BUILD_FOLDER, project_name));
 	}
 	else{
 		// Place in root folder, next to resources folder
-		nob_cc_output(&cmd, PROJECT_NAME);
+		nob_cc_output(&cmd, project_name);
 	}
 	if (get_source_files(&cmd)) return 1;
 	link_raylib(&cmd);
