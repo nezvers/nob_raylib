@@ -12,8 +12,12 @@ Only requirements are:
     Pass `debug` argument for debug build    
     ```./nob debug```    
 
-## VS Code
+## TODO
+- Add emscriptem builds
+- Add hotload
 
+## VS Code
+Available debug actions:
 - `(gdb) Rebuild All` initial build / rebuilds everything (nob and project)
 - `(gdb) Build` nob manages rebuilding self and project
 - `(gdb) Nob` debuging nob    
