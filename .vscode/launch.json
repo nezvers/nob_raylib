@@ -55,6 +55,32 @@
                 }
             ],
             "preLaunchTask": "re-build",
+        },
+        {
+            "name": "(gdb) Nob",
+            "type": "cppdbg",
+            "request": "launch",
+            "windows": {
+                "program": "${workspaceFolder}/nob.exe"
+            },
+            "linux": {
+                "program": "${workspaceFolder}/nob"
+            },
+            "args": ["debug"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "(gdb) Build Nob",
         }
 
     ]

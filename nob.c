@@ -7,8 +7,10 @@
 
 #define PROJECT_NAME "NoBuild_Raylib"
 
-#define BUILD_FOLDER "build/"
 #define SOURCE_FOLDER "src/"
+#define INCLUDE_FOLDER "include/"
+#define BUILD_FOLDER "build/"
+#define BIN_FOLDER BUILD_FOLDER "bin/"
 #define DOWNLOAD_FOLDER "download/"
 #define DEPENDENCY_FOLDER "dependencies/"
 
@@ -20,12 +22,16 @@
 #define RAYLIB_SRC_DIR DEPENDENCY_FOLDER RAYLIB_DIR_NAME "src/"
 
 #define DEBUG
+static bool is_debug;
 
+// REDEFINE nob_cc - https://web.archive.org/web/20160308010351/https://beefchunk.com/documentation/lang/c/pre-defined-c/precomp.html
+#undef nob_cc
 #if _WIN32
 #	define WINDOWS
-#	if defined(__GNUC__)
-#		define USE_MINGW_MAKE
+#	if defined(__MINGW32__)
 #		define nob_cc(cmd) nob_cmd_append(cmd, "gcc")
+#	elif defined(__GNUC__)
+#		define nob_cc(cmd) nob_cmd_append(cmd, "cc")
 #	elif defined(__clang__)
 #		define nob_cc(cmd) nob_cmd_append(cmd, "clang")
 #	elif defined(_MSC_VER)
@@ -36,29 +42,35 @@
 #	define nob_cc(cmd) nob_cmd_append(cmd, "cc")
 #endif
 
-#ifndef USE_MINGW_MAKE
-#	define USE_MAKE
+void nob_make(Nob_Cmd *cmd){
+#if defined(__MINGW32__)
+	nob_cmd_append(cmd, "mingw32-make");
+#else
+	nob_cmd_append(cmd, "make");
 #endif
-
-void source_files(Nob_Cmd *cmd){
-	nob_cc_inputs(cmd,
-		SOURCE_FOLDER "main.c",
-	);
-
-	nob_cmd_append(cmd,
-		"-I", "include/",
-	);
 }
 
+// Downloads file using curl or fallbacks to wget
 void download_file(const char *url, const char *dest) {
-	char cmd[2048];
-	snprintf(cmd, sizeof(cmd), "curl -fsSL \"%s\" -o \"%s\"", url, dest);
-	if (system(cmd) != 0) {
-		snprintf(cmd, sizeof(cmd), "wget -q \"%s\" -O \"%s\"", url, dest);
-		if (system(cmd) != 0) {
+	char download_cmd[2048] = {0};
+	snprintf(download_cmd, sizeof(download_cmd), "curl -fsSL \"%s\" -o \"%s\"", url, dest);
+	if (system(download_cmd) != 0) {
+		snprintf(download_cmd, sizeof(download_cmd), "wget -q \"%s\" -O \"%s\"", url, dest);
+		if (system(download_cmd) != 0) {
 			fprintf(stderr, "Failed to download %s\n", url);
 		}
 	}
+}
+
+int extract_tar_archive(const char *archive_path, const char *target_dir){
+	char tar_cmd[2048] = {0};
+	snprintf(tar_cmd, sizeof(tar_cmd), "tar -xzf \"%s\" -C \"%s\" --strip-components=1", archive_path, target_dir);
+	
+	if (system(tar_cmd)){
+		nob_log(NOB_ERROR, "[ERROR] Failed to extract: %s -> %s\nCMD: %s", archive_path, target_dir, tar_cmd);
+		return 1;
+	}
+	return 0;
 }
 
 int setup_raylib(Nob_Cmd *cmd){
@@ -76,21 +88,19 @@ int setup_raylib(Nob_Cmd *cmd){
 	// Extract
 	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER RAYLIB_DIR_NAME)) return 1;
 	if (!nob_file_exists(RAYLIB_SRC_DIR "raylib.h")){
-		const char *extract_cmd = "tar -xzf \"" RAYLIB_ARCHIVE "\" -C \"" DEPENDENCY_FOLDER RAYLIB_DIR_NAME "\" --strip-components=1";
-		system(extract_cmd);
+		// const char *extract_cmd = "tar -xzf \"" RAYLIB_ARCHIVE "\" -C \"" DEPENDENCY_FOLDER RAYLIB_DIR_NAME "\" --strip-components=1";
+		// system(extract_cmd);
+		if(extract_tar_archive(RAYLIB_ARCHIVE, DEPENDENCY_FOLDER RAYLIB_DIR_NAME)){
+			return 1;
+		}
 	}
 
 	// Compile
-	if (!nob_file_exists(RAYLIB_SRC_DIR "raylib.a")){
+	if (!nob_file_exists(RAYLIB_SRC_DIR "libraylib.a")){
 		nob_log(NOB_INFO, "[INFO] Changing directory: %s ", RAYLIB_SRC_DIR);
 		if (!nob_set_current_dir(nob_temp_sprintf("./%s", RAYLIB_SRC_DIR))) return 1;
 		
-		// TODO: match used compiler make
-	#if defined USE_MINGW_MAKE
-		nob_cmd_append(cmd, "mingw32-make");
-	#else
-		nob_cmd_append(cmd, "make");
-	#endif
+		nob_make(cmd);
 		nob_cmd_append(cmd, "PLATFORM=" RAYLIB_PLATFORM);
 		if (!nob_cmd_run(cmd)) return 1;
 		
@@ -106,8 +116,12 @@ int setup_raylib(Nob_Cmd *cmd){
 	return 0;
 }
 
+void get_include_raylib(Nob_Cmd *cmd){
+	nob_cmd_append(cmd, "-I", RAYLIB_SRC_DIR);
+}
+
 void link_raylib(Nob_Cmd *cmd){
-	nob_cmd_append(cmd, "-L", RAYLIB_SRC_DIR, "-lraylib", "-I", RAYLIB_SRC_DIR);
+	nob_cmd_append(cmd, "-L", RAYLIB_SRC_DIR, "-lraylib");
 
 #if defined(WINDOWS)
 	nob_cmd_append(cmd, "-lgdi32", "-lwinmm", "-lopengl32");
@@ -116,40 +130,91 @@ void link_raylib(Nob_Cmd *cmd){
 #endif
 }
 
+void get_include_directories(Nob_Cmd *cmd){
+	nob_cmd_append(cmd, "-I", INCLUDE_FOLDER);
+}
+
+void get_defines(Nob_Cmd *cmd){
+
+	// RESOURCES_PATH macro definition
+	if (is_debug){
+		nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../resources/"));
+	}
+	else{
+		nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "resources/"));
+	}
+
+	// Debug symbols
+	if (is_debug) nob_cmd_append(cmd, "-g");
+}
+
+int get_source_files(Nob_Cmd *cmd){
+	// Build source objects in parallel
+	Nob_Cmd obj_cmd = {0};
+	Nob_Procs procs = {0};
+	static struct {
+		const char *bin_path;
+		const char *src_path;
+	} targets[] = {
+		{ .bin_path = BIN_FOLDER"main.o", .src_path = SOURCE_FOLDER"main.c" },
+	};
+	
+	// TODO: Add check if object files are changed
+	for (size_t i = 0; i < NOB_ARRAY_LEN(targets); ++i){
+		nob_cc(&obj_cmd);
+		nob_da_append(&obj_cmd, "-c");
+		nob_da_append(&obj_cmd, targets[i].src_path);
+		nob_da_append(&obj_cmd, "-o");
+		nob_da_append(&obj_cmd, targets[i].bin_path);
+		nob_cc_flags(&obj_cmd);
+		get_defines(&obj_cmd);
+		get_include_raylib(&obj_cmd);
+		get_include_directories(&obj_cmd);
+		if (!nob_cmd_run(&obj_cmd, .async = &procs)) return 1;
+	}
+	
+	// Wait on all the async processes to finish and reset procs dynamic array to 0
+	if (!nob_procs_flush(&procs)) return 1;
+	
+	for (size_t i = 0; i < NOB_ARRAY_LEN(targets); ++i){
+		nob_cc_inputs(cmd, targets[i].bin_path);
+	}
+	return 0;
+}
+
 int main(int argc, char **argv){
 	NOB_GO_REBUILD_URSELF(argc, argv);
 
+	const char *program_name = nob_shift(argv, argc);
+	while (argc > 0){
+		const char *command_name = nob_shift(argv, argc);
+		if (strcmp(command_name, "debug") == 0){
+			is_debug = true;
+		}
+	}
+
 	if (!nob_mkdir_if_not_exists(DOWNLOAD_FOLDER)) return 1;
 	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER)) return 1;
+	if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) return 1;
+	if (!nob_mkdir_if_not_exists(BIN_FOLDER)) return 1;
 
 	Nob_Cmd cmd = {0};
 	if (setup_raylib(&cmd) != 0){
 		return 1;
 	}
 
-	if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) return 1;
-
 	// Compile project
-// #if defined(USE_GCC)
-// 	nob_cmd_append(&cmd, "gcc");
-// #else
-// 	nob_cmd_append(&cmd, "cc");
-// #endif
 	nob_cc(&cmd);
-
-	nob_cc_output(&cmd, BUILD_FOLDER PROJECT_NAME);
-#if defined(DEBUG)
-	nob_cmd_append(&cmd, "-g");
-#endif
-	source_files(&cmd);
+	if (is_debug){
+		// Place inside build folder
+		nob_cc_output(&cmd, BUILD_FOLDER PROJECT_NAME);
+	}
+	else{
+		// Place in root folder, next to resources folder
+		nob_cc_output(&cmd, PROJECT_NAME);
+	}
+	if (get_source_files(&cmd)) return 1;
 	link_raylib(&cmd);
-	nob_cc_flags(&cmd);
-
-#if defined(DEBUG)
-	nob_cmd_append(&cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../resources/"));
-#else
-	nob_cmd_append(&cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "resources/"));
-#endif
 
 	if (!nob_cmd_run(&cmd)) return 1;
 

@@ -36,17 +36,35 @@
             "detail": "Build Nob"
         },
         {
+            "label": "(gdb) Build Nob",
+            "type": "shell",
+            "command": "gcc",
+            "args": ["nob.c", "-o", "nob", "-g"],
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "(gdb) Build Nob"
+        },
+        {
             "label": "Nob",
             "type": "shell",
             "command": "./nob",
             "args": [],
             "group": "build",
             "problemMatcher": [],
-            "detail": "Build with nob"
+            "detail": "Build release with nob"
+        },
+        {
+            "label": "Nob build debug",
+            "type": "shell",
+            "command": "./nob",
+            "args": ["debug"],
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Build debug with nob"
         },
         {
             "label": "build all",
-            "dependsOn": ["Build Nob", "Nob"],
+            "dependsOn": ["Build Nob", "Nob build debug"],
             "dependsOrder": "sequence",
             "group": {
                 "kind": "build",
@@ -56,7 +74,7 @@
         },
         {
             "label": "re-build",
-            "dependsOn": ["Nob"],
+            "dependsOn": ["Nob build debug"],
             "dependsOrder": "sequence",
             "group": {
                 "kind": "build",
