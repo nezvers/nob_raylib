@@ -13,7 +13,7 @@ Only requirements are:
 ## Build options
 - Pass `debug` argument for debug build    
     ```./nob debug```    
-- Pass `project` with `"Your Project Name"` to build executable with your provided name.
+- Pass `project` with `"Name"` to build executable with your provided name.    
     ```./nob project "Raylib Template"```
 
 ## TODO
