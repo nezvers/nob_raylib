@@ -26,7 +26,8 @@ Only requirements are:
 - Add option to fetch source files from provided directories
 - Add compilation linking for APPLE (not personally interested, pull requests are welcome)  
 
-## VS Code
+## Supported IDE
+### VS Code
 Available debug actions:
 - `(gdb) Rebuild All` initial build / rebuilds everything (nob and project)
 - `(gdb) Build` nob manages rebuilding self and project
@@ -34,7 +35,7 @@ Available debug actions:
     
 Modify `.vscode/settings.json` to change used compiler (default:"gcc") and project name (default:"nob_raylib").
 
-## Zed
+### Zed
 Available debug options:
 - `Debug app` - call nob to manage rebuild and attach debugger to app
 - `Debug nob` - compiles nob and attach debugger
