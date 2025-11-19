@@ -17,8 +17,10 @@ Only requirements are:
     ```./nob project "Raylib Template"```
 
 ## TODO
-- Add emscriptem builds
+- Compile only updated source files
+- Add WASM builds with emscriptem
 - Add hotload
+- Add option to fetch source files from provided directories
 
 ## VS Code
 Available debug actions:
