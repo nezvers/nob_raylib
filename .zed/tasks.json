@@ -30,7 +30,7 @@
   {
     "label": "Build app",
     "command": "./nob",
-    "args": ["project", "nob_raylib"],
+    "args": ["-name", "nob_raylib"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
@@ -44,7 +44,7 @@
   {
     "label": "Build debug app",
     "command": "./nob",
-    "args": ["project", "nob_raylib", "debug"],
+    "args": ["-name", "nob_raylib", "-debug"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,

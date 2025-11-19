@@ -65,7 +65,7 @@ void download_file(const char *url, const char *dest) {
 int extract_tar_archive(const char *archive_path, const char *target_dir){
 	char tar_cmd[2048] = {0};
 	snprintf(tar_cmd, sizeof(tar_cmd), "tar -xzf \"%s\" -C \"%s\" --strip-components=1", archive_path, target_dir);
-	
+
 	if (system(tar_cmd)){
 		nob_log(NOB_ERROR, "[ERROR] Failed to extract: %s -> %s\nCMD: %s", archive_path, target_dir, tar_cmd);
 		return 1;
@@ -75,7 +75,7 @@ int extract_tar_archive(const char *archive_path, const char *target_dir){
 
 int setup_raylib(Nob_Cmd *cmd){
 	const char *raylib_url = "https://github.com/raysan5/raylib/archive/refs/tags/" RAYLIB_TAG ".tar.gz";
-	
+
 	// Download
 	if (!nob_file_exists(RAYLIB_ARCHIVE)){
 		download_file(raylib_url, RAYLIB_ARCHIVE);
@@ -97,11 +97,11 @@ int setup_raylib(Nob_Cmd *cmd){
 	if (!nob_file_exists(RAYLIB_SRC_DIR "libraylib.a")){
 		nob_log(NOB_INFO, "[INFO] Changing directory: %s ", RAYLIB_SRC_DIR);
 		if (!nob_set_current_dir(nob_temp_sprintf("./%s", RAYLIB_SRC_DIR))) return 1;
-		
+
 		nob_make(cmd);
 		nob_cmd_append(cmd, "PLATFORM=" RAYLIB_PLATFORM);
 		if (!nob_cmd_run(cmd)) return 1;
-		
+
 		nob_log(NOB_INFO, "[INFO] Changing directory: %s ", "../../../");
 		if (!nob_set_current_dir("../../../")) return 1;
 	}
@@ -156,7 +156,7 @@ int get_source_files(Nob_Cmd *cmd){
 	} targets[] = {
 		{ .bin_path = BIN_FOLDER"main.o", .src_path = SOURCE_FOLDER"main.c" },
 	};
-	
+
 	// TODO: Add check if object files are changed
 	for (size_t i = 0; i < NOB_ARRAY_LEN(targets); ++i){
 		nob_cc(&obj_cmd);
@@ -170,10 +170,10 @@ int get_source_files(Nob_Cmd *cmd){
 		get_include_directories(&obj_cmd);
 		if (!nob_cmd_run(&obj_cmd, .async = &procs)) return 1;
 	}
-	
+
 	// Wait on all the async processes to finish and reset procs dynamic array to 0
 	if (!nob_procs_flush(&procs)) return 1;
-	
+
 	for (size_t i = 0; i < NOB_ARRAY_LEN(targets); ++i){
 		nob_cc_inputs(cmd, targets[i].bin_path);
 	}
@@ -186,10 +186,10 @@ int main(int argc, char **argv){
 	const char *program_name = nob_shift(argv, argc);
 	while (argc > 0){
 		const char *command_name = nob_shift(argv, argc);
-		if (strcmp(command_name, "debug") == 0){
+		if (strcmp(command_name, "-debug") == 0){
 			is_debug = true;
 		}
-		else if (strcmp(command_name, "project") == 0){
+		else if (strcmp(command_name, "-name") == 0){
 			if (!(argc > 0)){
 				nob_log(NOB_ERROR, "[ERROR] No project name provided after `project`");
 				return 1;

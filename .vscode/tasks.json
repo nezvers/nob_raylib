@@ -1,86 +1,86 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "delete build",
-            "type": "shell",
-            "windows": {
-                "command": "if exist .\\build\\${config:executable_name}.exe del /F /Q .\\build\\${config:executable_name}.exe",
-                "options": {
-                    "shell": {
-                        "executable": "cmd.exe",
-                        "args": ["/C"]
-                    }
-                }
-            },
-            "linux": {
-                "command": "rm -f ./build/${config:executable_name}",
-                "options": {
-                    "shell": {
-                        "executable": "/bin/bash",
-                        "args": ["-c"]
-                    }
-                }
-            },
-            "group": "build",
-            "problemMatcher": [],
-            "detail": "Clear previous build"
-        },
-        {
-            "label": "Build Nob",
-            "type": "shell",
-            "command": "${config:CC}",
-            "args": ["nob.c", "-o", "nob"],
-            "group": "build",
-            "problemMatcher": [],
-            "detail": "Build Nob"
-        },
-        {
-            "label": "(gdb) Build Nob",
-            "type": "shell",
-            "command": "${config:CC}",
-            "args": ["nob.c", "-o", "nob", "-g"],
-            "group": "build",
-            "problemMatcher": [],
-            "detail": "(gdb) Build Nob"
-        },
-        {
-            "label": "Nob",
-            "type": "shell",
-            "command": "./nob",
-            "args": ["project", "${config:executable_name}"],
-            "group": "build",
-            "problemMatcher": [],
-            "detail": "Build release with nob"
-        },
-        {
-            "label": "Nob build debug",
-            "type": "shell",
-            "command": "./nob",
-            "args": ["debug", "project", "${config:executable_name}"],
-            "group": "build",
-            "problemMatcher": [],
-            "detail": "Build debug with nob"
-        },
-        {
-            "label": "build all",
-            "dependsOn": ["Build Nob", "Nob build debug"],
-            "dependsOrder": "sequence",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "re-build",
-            "dependsOn": ["Nob build debug"],
-            "dependsOrder": "sequence",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "problemMatcher": []
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "delete build",
+      "type": "shell",
+      "windows": {
+        "command": "if exist .\\build\\${config:PROJECT_NAME}.exe del /F /Q .\\build\\${config:PROJECT_NAME}.exe",
+        "options": {
+          "shell": {
+            "executable": "cmd.exe",
+            "args": ["/C"]
+          }
         }
-    ]
+      },
+      "linux": {
+        "command": "rm -f ./build/${config:PROJECT_NAME}",
+        "options": {
+          "shell": {
+            "executable": "/bin/bash",
+            "args": ["-c"]
+          }
+        }
+      },
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Clear previous build"
+    },
+    {
+      "label": "Build nob",
+      "type": "shell",
+      "command": "${config:COMPILER}",
+      "args": ["nob.c", "-o", "nob"],
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Build Nob"
+    },
+    {
+      "label": "Build debug nob",
+      "type": "shell",
+      "command": "${config:COMPILER}",
+      "args": ["nob.c", "-o", "nob", "-g"],
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "(gdb) Build Nob"
+    },
+    {
+      "label": "Build app",
+      "type": "shell",
+      "command": "./nob",
+      "args": ["-name", "${config:PROJECT_NAME}"],
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Build release with nob"
+    },
+    {
+      "label": "Build debug app",
+      "type": "shell",
+      "command": "./nob",
+      "args": ["-debug", "-name", "${config:PROJECT_NAME}"],
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Build debug with nob"
+    },
+    {
+      "label": "build all",
+      "dependsOn": ["Build nob", "Build debug app"],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "re-build",
+      "dependsOn": ["Build debug app"],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
 }

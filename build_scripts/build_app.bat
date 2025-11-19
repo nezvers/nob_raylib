@@ -4,6 +4,6 @@ SET CWD=%CD%
 cd %~dp0
 cd ..
 gcc -o nob nob.c
-.\nob project %PROJECT_NAME%
+.\nob -name %PROJECT_NAME%
 
 cd %CWD%

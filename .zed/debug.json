@@ -7,7 +7,7 @@
     "label": "Debug app",
     "build": {
       "command": "./nob",
-      "args": ["debug", "project", "nob_raylib"],
+      "args": ["-debug", "-name", "nob_raylib"],
       "cwd": "$ZED_WORKTREE_ROOT"
     },
     "program": "$ZED_WORKTREE_ROOT/build/nob_raylib",

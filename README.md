@@ -11,10 +11,10 @@ Only requirements are:
 ```./nob```    
 
 ## Build options
-- Pass `debug` argument for debug build    
-    ```./nob debug```    
-- Pass `project` with `"Name"` to build executable with your provided name.    
-    ```./nob project "Raylib Template"```
+- Pass `-debug` argument for debug build    
+    ```./nob -debug```    
+- Pass `-name` with `"Name"` to build executable with your provided name.    
+    ```./nob -name "Raylib Template"```
 
 ## Compilation hints
 - On Linux if you get Raylib compilation error for `X11` you need to install dependencies recommended by [GLFW](https://www.glfw.org/docs/latest/compile.html)
@@ -34,7 +34,7 @@ Available debug actions:
 - `(gdb) Build` nob manages rebuilding self and project
 - `(gdb) Nob` debuging nob    
     
-Modify `.vscode/settings.json` to change used compiler (default:"gcc") and project name (default:"nob_raylib").
+Modify `.vscode/settings.json` to change used `COMPILER` (default:"gcc") and `PROJECT_NAME` (default:"nob_raylib").
 
 ### Zed
 Available tasks:

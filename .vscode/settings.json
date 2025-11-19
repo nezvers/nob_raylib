@@ -3,6 +3,6 @@
     "stdlib.h": "c",
     "string.h": "c"
   },
-  "executable_name": "nob_raylib",
-  "CC": "gcc"
+  "PROJECT_NAME": "nob_raylib",
+  "COMPILER": "gcc"
 }
