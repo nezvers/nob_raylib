@@ -1,8 +1,8 @@
 {
-    "files.associations": {
-        "stdlib.h": "c",
-        "string.h": "c"
-    },
-    "executable_name": "nob_raylib",
-    "CC": "gcc",
+  "files.associations": {
+    "stdlib.h": "c",
+    "string.h": "c"
+  },
+  "executable_name": "nob_raylib",
+  "CC": "gcc"
 }

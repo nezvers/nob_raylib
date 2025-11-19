@@ -37,6 +37,12 @@ Available debug actions:
 Modify `.vscode/settings.json` to change used compiler (default:"gcc") and project name (default:"nob_raylib").
 
 ### Zed
+Available tasks:
+- `Build nob`
+- `Build debug nob`
+- `Build app`
+- `Build debug app`    
+    
 Available debug options:
 - `Debug app` - call nob to manage rebuild and attach debugger to app
 - `Debug nob` - compiles nob and attach debugger
