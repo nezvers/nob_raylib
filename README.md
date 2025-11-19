@@ -16,6 +16,9 @@ Only requirements are:
 - Pass `project` with `"Name"` to build executable with your provided name.    
     ```./nob project "Raylib Template"```
 
+## Compilation hints
+- On Linux if you get Raylib compilation error for `X11` you need to install dependencies recommended by [GLFW](https://www.glfw.org/docs/latest/compile.html)
+
 ## TODO
 - Compile only updated source files
 - Add WASM builds with emscriptem
@@ -30,5 +33,7 @@ Available debug actions:
     
 Modify `.vscode/settings.json` to change used compiler (default:"gcc") and project name (default:"nob_raylib").
 
-## Hints
-- On Linux if you get Raylib compilation error for `X11` you need to install dependencies recommended by [GLFW](https://www.glfw.org/docs/latest/compile.html)
+## Zed
+Available debug options:
+- `Debug app` - call nob to manage rebuild and attach debugger to app
+- `Debug nob` - compiles nob and attach debugger
