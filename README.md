@@ -27,3 +27,6 @@ Available debug actions:
 - `(gdb) Nob` debuging nob    
     
 Modify `.vscode/settings.json` to change used compiler (default:"gcc") and project name (default:"nob_raylib").
+
+## Hints
+- On Linux if you get Raylib compilation error for `X11` you need to install dependencies recommended by [GLFW](https://www.glfw.org/docs/latest/compile.html)
