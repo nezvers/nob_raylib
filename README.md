@@ -24,6 +24,7 @@ Only requirements are:
 - Add WASM builds with emscriptem
 - Add hotload
 - Add option to fetch source files from provided directories
+- Add compilation linking for APPLE (not personally interested, pull requests are welcome)  
 
 ## VS Code
 Available debug actions:
