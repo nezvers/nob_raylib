@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define PROJECT_NAME "NoBuild_Raylib"
+#define PROJECT_NAME "nob_raylib"
 
 #define SOURCE_FOLDER "src/"
 #define INCLUDE_FOLDER "include/"
