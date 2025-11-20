@@ -1,6 +1,7 @@
 /build
 /dependencies
 /download
+/web_build
 
 *.exe
 *.old
