@@ -16,13 +16,16 @@ Only requirements are:
 - Pass `-name` with `"Name"` to build executable with your provided name.    
     ```./nob -name "Raylib Template"```
 
+## Features
+- All C build system. Easily implement project scaling.
+- "Passive" hot-reload with [adjust.h](https://github.com/bi3mer/adjust.h)
+
 ## Compilation hints
 - On Linux if you get Raylib compilation error for `X11` you need to install dependencies recommended by [GLFW](https://www.glfw.org/docs/latest/compile.html)
 
 ## TODO
 - Compile only updated source files
 - Add WASM builds with emscriptem
-- Add hotload
 - Add option to fetch source files from provided directories
 - Rework and expand nob arguments (-help, -platform, -debug, -name)
 - Add compilation linking for APPLE (not personally interested, pull requests are welcome)  

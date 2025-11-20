@@ -1,44 +1,42 @@
-#include "raylib.h"
+#include "raylib.h" // www.raylib.com
+#include "adjust.h" // learn about features -> https://github.com/bi3mer/adjust.h 
 
-//------------------------------------------------------------------------------------
-// Program main entry point
-//------------------------------------------------------------------------------------
 int main(void)
 {
     // Initialization
-    //--------------------------------------------------------------------------------------
+    adjust_init();
+
     const int screenWidth = 800;
     const int screenHeight = 450;
 
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+    InitWindow(screenWidth, screenHeight, "raylib template");
 
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
-    //--------------------------------------------------------------------------------------
+    SetTargetFPS(60);
 
-    // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    while (!WindowShouldClose())
     {
         // Update
-        //----------------------------------------------------------------------------------
-        // TODO: Update your variables here
-        //----------------------------------------------------------------------------------
+        adjust_update();
 
         // Draw
-        //----------------------------------------------------------------------------------
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
 
-            DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
+            // NOTE: Keep each ADJUST on it's own line
+            DrawText(
+                ADJUST_STRING("ADJUST! You can change this while app is running!"), 
+                ADJUST_INT(170),
+                ADJUST_INT(200),
+                ADJUST_INT(20),
+                LIGHTGRAY);
 
         EndDrawing();
-        //----------------------------------------------------------------------------------
     }
 
     // De-Initialization
-    //--------------------------------------------------------------------------------------
-    CloseWindow();        // Close window and OpenGL context
-    //--------------------------------------------------------------------------------------
+    adjust_cleanup();
+    CloseWindow();
 
     return 0;
 }

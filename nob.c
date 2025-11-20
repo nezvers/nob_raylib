@@ -1,7 +1,7 @@
 #define NOB_IMPLEMENTATION
 // #define NOB_STRIP_PREFIX
 #define NOB_WARN_DEPRECATED
-#include "nob.h" // https://github.com/tsoding/nob.h
+#include "include/nob.h" // https://github.com/tsoding/nob.h
 #include <stdio.h>
 #include <string.h>
 
