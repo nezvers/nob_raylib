@@ -12,6 +12,7 @@
 #define BUILD_FOLDER "build/"
 #define BIN_FOLDER BUILD_FOLDER "bin/"
 #define WEB_FOLDER "web_build"
+#define RESOURCES_FOLDER "resources/"
 #define DOWNLOAD_FOLDER "download/"
 #define DEPENDENCY_FOLDER "dependencies/"
 #define CONFIG_FILE_NAME ".config"
@@ -39,7 +40,7 @@ enum PLATFORM_TARGET {
 // For tracking last build settings that needs to be rebuild
 static int config_version = 1;
 struct SavedConfig {
-	enum PLATFORM_TARGET target_platform;
+	enum PLATFORM_TARGET platform;
 	bool enable_wayland;
 };
 
@@ -193,7 +194,7 @@ int setup_raylib(Nob_Cmd *cmd){
 	}
 
 	// Compile
-	bool need_rebuild = previous_config != NULL && previous_config->target_platform != current_config.target_platform;
+	bool need_rebuild = previous_config != NULL && previous_config->platform != current_config.platform;
 	if (!nob_file_exists(RAYLIB_SRC_DIR "libraylib.a") || need_rebuild){
 		nob_log(NOB_INFO, "Changing directory: %s ", RAYLIB_SRC_DIR);
 		if (!nob_set_current_dir(nob_temp_sprintf("./%s", RAYLIB_SRC_DIR))){
@@ -202,7 +203,20 @@ int setup_raylib(Nob_Cmd *cmd){
 		}
 
 		nob_make(cmd);
-		const char *raylib_platform = get_raylib_platform(current_config.target_platform);
+		const char *raylib_platform = get_raylib_platform(current_config.platform);
+		if (current_config.platform == PLATFORM_WEB){
+			Nob_Cmd emsdk_cmd = {0};
+			nob_cmd_append(&emsdk_cmd, "emsdk", "activate", "latest");
+			if (!nob_cmd_run(&emsdk_cmd)){
+				nob_log(NOB_ERROR, "Failed to activate latest emscriptem");
+				return 1;
+			}
+			nob_cmd_append(&emsdk_cmd, "emsdk_env");
+			if (!nob_cmd_run(&emsdk_cmd)){
+				nob_log(NOB_ERROR, "Failed to initiate emscriptem environment");
+				return 1;
+			}
+		}
 		nob_cmd_append(cmd, raylib_platform);
 		if (!nob_cmd_run(cmd)){
 			nob_log(NOB_ERROR, "Failed to compile raylib");
@@ -231,7 +245,7 @@ void get_include_raylib(Nob_Cmd *cmd){
 void link_raylib(Nob_Cmd *cmd){
 	nob_cmd_append(cmd, "-L", RAYLIB_SRC_DIR, "-lraylib");
 
-	switch (current_config.target_platform){
+	switch (current_config.platform){
 		case (PLATFORM_DESKTOP):
 		case (PLATFORM_DESKTOP_GLFW):
 		case (PLATFORM_DESKTOP_RGFW):
@@ -253,28 +267,28 @@ void get_defines(Nob_Cmd *cmd){
 		// Debug symbols
 		nob_cmd_append(cmd, "-g");
 		nob_cmd_append(cmd, "-O0", "-DDEBUG");
-		switch (current_config.target_platform){
+		switch (current_config.platform){
 			case (PLATFORM_DESKTOP):
 			case (PLATFORM_DESKTOP_GLFW):
 			case (PLATFORM_DESKTOP_RGFW):
-				nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../resources/"));
+				nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../" RESOURCES_FOLDER));
 				break;
 			default:
-				nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../resources/"));	
+				nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../" RESOURCES_FOLDER));	
 		}
 	}
 	else{
-		nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "resources/"));
+		nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", RESOURCES_FOLDER));
 	}
 
-	if (current_config.target_platform == PLATFORM_WEB){
+	if (current_config.platform == PLATFORM_WEB){
 		nob_cmd_append(cmd, "-Os", "-Wall");
 		nob_cmd_append(cmd, "-s", "USE_GLFW=3");
 		nob_cmd_append(cmd, "-s", "ASSERTIONS=1");
 		nob_cmd_append(cmd, "-s", "WASM=1");
 		nob_cmd_append(cmd, "-s", "TOTAL_MEMORY=67108864");
 		nob_cmd_append(cmd, "-s", "FORCE_FILESYSTEM=1");
-		nob_cmd_append(cmd, "--preload-file", "resources/");
+		nob_cmd_append(cmd, "--preload-file", RESOURCES_FOLDER);
 		nob_cmd_append(cmd, "--shell-file", "../minshell.html");
 	}
 }
@@ -315,7 +329,15 @@ int get_source_files(Nob_Cmd *cmd){
 
 int setup_web(Nob_Cmd *cmd){
 	if (!nob_mkdir_if_not_exists(WEB_FOLDER)) return 1;
-	if (!nob_mkdir_if_not_exists(WEB_FOLDER)) return 1;
+	if (nob_file_exists(WEB_FOLDER RESOURCES_FOLDER)){
+		if (!nob_delete_file(WEB_FOLDER RESOURCES_FOLDER)){
+			return 1;
+		}
+	}
+	if (!nob_mkdir_if_not_exists(WEB_FOLDER RESOURCES_FOLDER)) return 1;
+	if (!nob_copy_directory_recursively(RESOURCES_FOLDER, WEB_FOLDER RESOURCES_FOLDER)){
+		return 1;
+	}
 
 	return 0;
 }
@@ -336,6 +358,16 @@ int main(int argc, char **argv){
 			}
 			project_name = nob_shift(argv, argc);
 		}
+		else if (strcmp(command_name, "-platform") == 0){
+			if (!(argc > 0)){
+				nob_log(NOB_ERROR, "[ERROR] No project name provided after `project`");
+				return 1;
+			}
+			const char *platform = nob_shift(argv, argc);
+			if (strcmp(platform, "web") == 0){
+				current_config.platform = PLATFORM_WEB;
+			}
+		}
 	}
 
 	if (!nob_mkdir_if_not_exists(DOWNLOAD_FOLDER)) return 1;
@@ -353,7 +385,7 @@ int main(int argc, char **argv){
 		return 1;
 	}
 
-	if (current_config.target_platform == PLATFORM_WEB && setup_web(&cmd) != 0){
+	if (current_config.platform == PLATFORM_WEB && setup_web(&cmd) != 0){
 		return 1;
 	}
 
