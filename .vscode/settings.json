@@ -1,7 +1,9 @@
 {
   "files.associations": {
     "stdlib.h": "c",
-    "string.h": "c"
+    "string.h": "c",
+    "stdio.h": "c",
+    "nob.h": "c"
   },
   "PROJECT_NAME": "nob_raylib",
   "COMPILER": "gcc"
