@@ -19,15 +19,15 @@
 #define CONFIG_FILE_NAME ".config"
 
 #define RAYLIB_TAG "5.5"
-#define RAYLIB_TAR_FILE "raylib.tar.gz"
 #define RAYLIB_DIR_NAME "raylib/"
 #define RAYLIB_PLATFORM "PLATFORM_DESKTOP"
+#define RAYLIB_TAR_FILE "raylib.tar.gz"
 #define RAYLIB_ARCHIVE DOWNLOAD_FOLDER RAYLIB_TAR_FILE
 #define RAYLIB_SRC_DIR DEPENDENCY_FOLDER RAYLIB_DIR_NAME "src/"
 
 #define EMSCRIPTEN_TAG "4.0.20"
-#define EMSCRIPTEN_TAR_FILE "emscripten.tar.gz"
-#define EMSCRIPTEN_DIR_NAME "emscripten/"
+#define EMSCRIPTEN_DIR_NAME "emsdk/"
+#define EMSCRIPTEN_TAR_FILE "emsdk.tar.gz"
 #define EMSCRIPTEN_ARCHIVE DOWNLOAD_FOLDER EMSCRIPTEN_TAR_FILE
 #define EMSCRIPTEN_SRC_DIR DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME
 
@@ -38,12 +38,13 @@ static int config_version = 1;
 
 // It is set by build input arguments
 static struct SavedConfig current_config = {
-	false,
-	PLATFORM_DESKTOP,
-	false,
+	false,				// -debug
+	PLATFORM_DESKTOP,	// -platform <target>
+	false,				// -wayland
 };
 // If successfully loaded config it will point to the data
 static struct SavedConfig *previous_config = NULL;
+static char starting_cwd[1024] = {0};
 
 //---------------------------------------------------------------------------------
 // Raylib
@@ -67,7 +68,6 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 		if (download_file(raylib_url, RAYLIB_ARCHIVE) == FAILED){
 			return FAILED;
 		}
-
 		if (!nob_file_exists(RAYLIB_ARCHIVE)){
 			nob_log(NOB_ERROR, "Just downloaded file dissapeared");
 			return FAILED;
@@ -76,7 +76,7 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 
 	// Extract
 	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER RAYLIB_DIR_NAME)) return FAILED;
-	if (!nob_file_exists(RAYLIB_SRC_DIR "raylib.h")){
+	if (!nob_file_exists(DEPENDENCY_FOLDER RAYLIB_DIR_NAME "README.md")){
 		if(extract_tar_archive(RAYLIB_ARCHIVE, DEPENDENCY_FOLDER RAYLIB_DIR_NAME, 1)){
 			return FAILED;
 		}
@@ -93,28 +93,17 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 
 		nob_make(cmd);
 		const char *raylib_platform = get_raylib_platform(current_config.platform);
-		if (current_config.platform == PLATFORM_WEB){
-			Nob_Cmd emsdk_cmd = {0};
-			nob_cmd_append(&emsdk_cmd, "emsdk", "activate", "latest");
-			if (!nob_cmd_run(&emsdk_cmd)){
-				nob_log(NOB_ERROR, "Failed to activate latest emscriptem");
-				return FAILED;
-			}
-			nob_cmd_append(&emsdk_cmd, "emsdk_env");
-			if (!nob_cmd_run(&emsdk_cmd)){
-				nob_log(NOB_ERROR, "Failed to initiate emscriptem environment");
-				return FAILED;
-			}
-		}
 		nob_cmd_append(cmd, raylib_platform);
-		if (!nob_cmd_run(cmd)){
-			nob_log(NOB_ERROR, "Failed to compile raylib");
-			return FAILED;
-		}
+		// defer failure after redurning current working directory
+		bool compile_success = nob_cmd_run(cmd);
 
 		nob_log(NOB_INFO, "Changing directory: %s ", "../../../");
 		if (!nob_set_current_dir("../../../")){
-			nob_log(NOB_ERROR, "Failed to move bact to root directory");
+			nob_log(NOB_ERROR, "Failed to move back to root directory");
+			return FAILED;
+		}
+		if (!compile_success){
+			nob_log(NOB_ERROR, "Failed to compile raylib");
 			return FAILED;
 		}
 	}
@@ -149,18 +138,19 @@ void link_raylib(Nob_Cmd *cmd){
 //---------------------------------------------------------------------------------
 // Emscripten
 enum RESULT setup_emscripten(Nob_Cmd *cmd){
-	const char *emscripten_url = "https://github.com/emscripten-core/emscripten/archive/refs/tags/" EMSCRIPTEN_TAG ".tar.gz";
+	const char *emscripten_git = "https://github.com/emscripten-core/emsdk.git";
+	const char *emsdk_tar = "https://github.com/emscripten-core/emsdk/archive/refs/tags/" EMSCRIPTEN_TAG ".tar.gz";
 	// EMSCRIPTEN_TAG
-	// EMSCRIPTEN_TAR_FILE
 	// EMSCRIPTEN_DIR_NAME
-	// EMSCRIPTEN_ARCHIVE
 	// EMSCRIPTEN_SRC_DIR
+	// EMSCRIPTEN_TAR_FILE
+	// EMSCRIPTEN_ARCHIVE
+
 	// Download
 	if (!nob_file_exists(EMSCRIPTEN_ARCHIVE)){
-		if (download_file(emscripten_url, EMSCRIPTEN_ARCHIVE) == FAILED){
+		if (download_file(emsdk_tar, EMSCRIPTEN_ARCHIVE) == FAILED){
 			return FAILED;
 		}
-
 		if (!nob_file_exists(EMSCRIPTEN_ARCHIVE)){
 			nob_log(NOB_ERROR, "Just downloaded file dissapeared");
 			return FAILED;
@@ -169,23 +159,45 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 
 	// Extract
 	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME)) return FAILED;
-	if (!nob_file_exists(EMSCRIPTEN_SRC_DIR "README.md")){
+	if (!nob_file_exists(DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME "README.md")){
 		if(extract_tar_archive(EMSCRIPTEN_ARCHIVE, DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME, 1)){
 			return FAILED;
 		}
 	}
 
 	if (!nob_file_exists(EMSCRIPTEN_SRC_DIR ".emscripten")){
+		nob_log(NOB_INFO, "Changing directory: %s ", EMSCRIPTEN_SRC_DIR);
+		if (!nob_set_current_dir(EMSCRIPTEN_SRC_DIR)){
+			nob_log(NOB_ERROR, "Failed to change to directory: %s", EMSCRIPTEN_SRC_DIR);
+			return FAILED;
+		}
+		
+		nob_log(NOB_INFO, "EMSDK first time installation - latest");
 #if defined(WINDOWS)
-		system(EMSCRIPTEN_SRC_DIR ".emsdk.bat install latest");
+		// char emsdk_path[1024] = {0};
+		// snprintf(emsdk_path, sizeof(emsdk_path), "%s", nob_get_current_dir_temp());
+
+		Nob_Cmd emsdk_cmd = {0};
+		// nob_cmd_append(&emsdk_cmd, "powershell", ".\\emsdk.ps1", "install", "latest");
+		nob_cmd_append(&emsdk_cmd, "cmd", "/c", ".\\emsdk.bat", "install", "latest");
+		bool install_success = nob_cmd_run(&emsdk_cmd);
 #elif defined(LINUX)
-		system(EMSCRIPTEN_SRC_DIR ".emsdk install latest");
+		system("./emsdk install latest");
 #endif
+		nob_log(NOB_INFO, "Changing directory: %s ", "../../");
+		if (!nob_set_current_dir("../../")){
+			nob_log(NOB_ERROR, "Failed to move back to root directory");
+			return FAILED;
+		}
+		if (!install_success) {return FAILED;}
 	}
 
+	nob_log(NOB_INFO, "EMSDK activate environment");
 #if defined(WINDOWS)
-	if (system(EMSCRIPTEN_SRC_DIR ".emsdk.bat activate latest") != 0){return FAILED;}
-	if (system(EMSCRIPTEN_SRC_DIR "emsdk_env.bat") != 0){return FAILED;}
+	char emsdk_dir[128] = EMSCRIPTEN_SRC_DIR;
+	swap_dir_slashes(emsdk_dir, sizeof(emsdk_dir));
+	if (system(nob_temp_sprintf("%semsdk.bat activate latest", emsdk_dir)) != 0){return FAILED;}
+	if (system(nob_temp_sprintf("%semsdk_env.bat", emsdk_dir)) != 0){return FAILED;}
 #elif defined(LINUX)
 	if (system(EMSCRIPTEN_SRC_DIR "emsdk activate latest") != 0){return FAILED;}
 	if (system("source " EMSCRIPTEN_SRC_DIR "emsdk_env.sh") != 0){return FAILED;}
@@ -315,6 +327,8 @@ int main(int argc, char **argv){
 			}
 		}
 	}
+
+	snprintf(starting_cwd, sizeof(starting_cwd), "%s", nob_get_current_dir_temp());
 
 	if (!nob_mkdir_if_not_exists(DOWNLOAD_FOLDER)) return FAILED;
 	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER)) return FAILED;

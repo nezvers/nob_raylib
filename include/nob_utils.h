@@ -55,6 +55,7 @@ enum RESULT delete_directory(const char *dir_path){
 	char dir_buffer[1024] = {0};
 	snprintf(dir_buffer, sizeof(dir_buffer) / sizeof(dir_buffer[0]), "%s", dir_path);
 	swap_dir_slashes(dir_buffer, sizeof(dir_buffer) / sizeof(dir_buffer[0]));
+	// explicitly call from cmd.exe otherwise gives error
 	if (system(nob_temp_sprintf("cmd.exe /c \"rmdir /s /q %s \"", dir_buffer)) == FAILED){
 		nob_log(NOB_ERROR, "Failed to delete a directory: %s", dir_path);
 		return FAILED;
@@ -164,21 +165,29 @@ enum RESULT extract_tar_archive(const char *archive_path, const char *target_dir
 	return SUCCESS;
 }
 
-enum RESULT extract_zip_archive(const char *archive_path, const char *target_dir){
+enum RESULT extract_zip_archive(const char *archive_path, const char *target_dir, unsigned int strip_lvl){
 	char zip_cmd[2048] = {0};
-#if defined(WINDOWS)
-	// Slow as shit
 	// snprintf(zip_cmd, sizeof(zip_cmd), "powershell -command \"Expand-Archive -Force '%s' '%s'", archive_path, target_dir);
-	snprintf(zip_cmd, sizeof(zip_cmd), "tar -xf \"%s\" -C \"%s\"", archive_path, target_dir);
-#elif defined(LINUX)
-	snprintf(zip_cmd, sizeof(zip_cmd), "tar -xf \"%s\" -C \"%s\"", archive_path, target_dir);
-#endif
+	snprintf(zip_cmd, sizeof(zip_cmd), "tar -xf \"%s\" -C \"%s\" --strip-components=%d", archive_path, target_dir, strip_lvl);
 
 	if (system(zip_cmd)){
 		nob_log(NOB_ERROR, "Failed to extract: %s -> %s\nCMD: %s", archive_path, target_dir, zip_cmd);
 		return FAILED;
 	}
 	return SUCCESS;
+}
+
+enum RESULT git_clone(const char *git_repo, const char *tag, unsigned int depth, bool recursive, bool single_branch){
+    Nob_Cmd git_cmd = {0};
+    nob_cmd_append(&git_cmd, "git", "clone");
+    if (recursive) nob_cmd_append(&git_cmd, "--recursive");
+    if (single_branch) nob_cmd_append(&git_cmd, "--single-branch");
+    if (tag != NULL) nob_cmd_append(&git_cmd, "--branch", nob_temp_sprintf("%s", tag));
+    if (depth != 0) nob_cmd_append(&git_cmd, "--depth", nob_temp_sprintf("%d", depth));
+    nob_cmd_append(&git_cmd, git_repo);
+    if (!nob_cmd_run(&git_cmd)) return FAILED;
+
+    return SUCCESS;
 }
 
 #endif //NOB_UTILS_H
