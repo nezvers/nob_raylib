@@ -1,6 +1,6 @@
 # Raylib template with nob.h
 No need for Cmake or make to automate C project build, unless you want to include library that requires them.    
-Project build automation is built on top of [nob.h](https://github.com/tsoding/nob.h) library.    
+Project build automation is built on top of [nob.h](https://github.com/tsoding/nob.h) library. Control  project and build process in single C language.    
     
 The only requirements are:    
 - C compiler (gcc, clang, msvc, mingw, tinyc)
