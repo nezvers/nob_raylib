@@ -11,6 +11,7 @@ The only requirements are:
 ```gcc -o nob nob.c```    
 2. Start building project.    
 ```./nob```    
+3. Extend `nob.c` build script as your project grows.
 
 ## Build options
 - Pass `-debug` argument for debug build    
