@@ -4,6 +4,10 @@
     "string.h": "c",
     "stdio.h": "c",
     "nob.h": "c",
+    "chrono": "c",
+    "future": "c",
+    "system_error": "c",
+    "xlocale": "c"
   },
   "PROJECT_NAME": "nob_raylib",
   "COMPILER": "gcc"

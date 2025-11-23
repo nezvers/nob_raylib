@@ -91,7 +91,7 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 			return FAILED;
 		}
 
-		nob_make(cmd);
+		nob_cmd_make(cmd);
 		const char *raylib_platform = get_raylib_platform(current_config.platform);
 		nob_cmd_append(cmd, raylib_platform);
 		// defer failure after redurning current working directory
@@ -127,11 +127,16 @@ void link_raylib(Nob_Cmd *cmd){
 		case (PLATFORM_DESKTOP):
 		case (PLATFORM_DESKTOP_GLFW):
 		case (PLATFORM_DESKTOP_RGFW):
-	#if defined(WINDOWS)
-			nob_cmd_append(cmd, "-lgdi32", "-lwinmm", "-lopengl32");
-	#elif defined(LINUX)
-			nob_cmd_append(cmd, "-lm", "-ldl", "-lpthread", "-lGL", "-lX11");
+		// TODO: refactor to use the ones that are needed in context
+#if defined(WINDOWS)
+	#if defined(_MSC_VER)
+			nob_cmd_append(cmd, "Winmm.lib", "gdi32.lib", "User32.lib", "Shell32.lib", "Ole32.lib", "comdlg32.lib");
+	#else
+			nob_cmd_append(cmd, "-lgdi32", "-lwinmm", "-lopengl32", "-lole32");
 	#endif
+#elif defined(LINUX)
+			nob_cmd_append(cmd, "-lm", "-ldl", "-lpthread", "-lGL", "-lX11");
+#endif
 			break;
 	}
 }
@@ -260,6 +265,14 @@ void get_defines(Nob_Cmd *cmd){
 		nob_cmd_append(cmd, "--preload-file", RESOURCES_FOLDER);
 		nob_cmd_append(cmd, "--shell-file", "../minshell.html");
 	}
+}
+
+void link_platform(Nob_Cmd *cmd){
+	#if defined(WINDOWS)
+	nob_cmd_append(cmd, "-lwinmm", "-lgdi32", "-lole32");
+#elif defined(LINUX)
+	nob_cmd_append(cmd, "-lm", "-ldl", "-flto=auto", "-lpthread");
+#endif
 }
 
 enum RESULT get_source_files(Nob_Cmd *cmd){

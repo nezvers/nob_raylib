@@ -9,7 +9,7 @@
 - Template supports platforms: Windows, Linux (X11). More to come.
     
 ## The only requirements are:    
-- C compiler (gcc, clang, msvc, mingw, tinyc)
+- C compiler (gcc, clang, mingw, tinyc, msvc (mostly) )
 - `make` or `mingw32-make`    
 - `gdb` for debugging    
     

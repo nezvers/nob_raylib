@@ -71,11 +71,44 @@ enum RESULT delete_directory(const char *dir_path){
 	return SUCCESS;
 }
 
-void nob_make(Nob_Cmd *cmd){
+void nob_cmd_make(Nob_Cmd *cmd){
 #if defined(__MINGW32__)
 	nob_cmd_append(cmd, "mingw32-make");
 #else
 	nob_cmd_append(cmd, "make");
+#endif
+}
+
+void nob_cmd_output_shared_object(Nob_Cmd *cmd, const char *src_path, const char *bin_path, bool debug){
+#if defined(_MSC_VER)
+	// TODO: add missing MSVC flags
+#else
+	if (debug) nob_cmd_append(cmd, "-g");
+	nob_cmd_append(cmd, "-c", src_path);
+	nob_cmd_append(cmd, "-fpic");
+	nob_cmd_append(cmd, "-o", bin_path);
+#endif
+}
+
+void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *directory, bool debug){
+#if defined(WINDOWS)
+	#if defined(_MSC_VER)
+		// TODO: add missing MSVC flags
+		if (debug) nob_cmd_append(cmd, "/LDd");
+		else nob_cmd_append(cmd, "/LD");
+
+		nob_cmd_append(cmd, nob_temp_sprintf("/F%s", directory));
+		nob_cmd_append(cmd, nob_temp_sprintf("/Fe%slib%s.dll", directory, name));
+	#else
+		if (debug) nob_cmd_append(cmd, "-g");
+		nob_cmd_append(cmd, "-shared", "-o");
+		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.dll", directory, name));
+		nob_cmd_append(cmd, "-Wl", "--out-implib");
+	#endif
+#elif defined(LINUX)
+	if (debug) nob_cmd_append(cmd, "-g");
+	nob_cmd_append(cmd, "-shared", "-o");
+	nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.so", directory, name));
 #endif
 }
 
