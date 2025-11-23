@@ -279,6 +279,8 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 	// Build source objects in parallel
 	Nob_Cmd obj_cmd = {0};
 	Nob_Procs procs = {0};
+	enum RESULT result = SUCCESS;
+	size_t temp_checkpoint = nob_temp_save();
 	static struct {
 		const char *bin_path;
 		const char *src_path;
@@ -286,34 +288,40 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 		{ .bin_path = BIN_FOLDER"main.o", .src_path = SOURCE_FOLDER"main.c" },
 	};
 
-	// TODO: Add check if object files are changed
-	for (size_t i = 0; i < NOB_ARRAY_LEN(targets); ++i){
+	Nob_File_Paths file_list = {0};
+	nob_fetch_files(SOURCE_FOLDER, &file_list, ".c");
+	for (int i = 0; i < file_list.count; ++i){
+		Nob_String_View src_file = get_file_name_no_extension(file_list.items[i]);
+		const char * src_name = nob_temp_cstr_from_string_view(&src_file);
+		// TODO: Add check if object files are changed
 		nob_cc(&obj_cmd);
-		nob_cmd_append(&obj_cmd, "-c", targets[i].src_path);
-		nob_cmd_append(&obj_cmd, "-o", targets[i].bin_path);
+		nob_cmd_append(&obj_cmd, "-c", nob_temp_sprintf("%s%s.c", SOURCE_FOLDER, src_name));
+		const char *bin_path = nob_temp_sprintf("%s%s.o", BIN_FOLDER, src_name);
+		nob_cmd_append(&obj_cmd, "-o", bin_path);
 		nob_cc_flags(&obj_cmd);
 		get_defines(&obj_cmd);
 		get_include_raylib(&obj_cmd);
 		get_include_directories(&obj_cmd);
 		if (!nob_cmd_run(&obj_cmd, .async = &procs)){
 			nob_log(NOB_ERROR, "Appending build to queue failed");
-			return FAILED;
+			result = FAILED;
+			goto defer;
 		}
+		nob_cc_inputs(cmd, bin_path);
 	}
 
 	// Wait on all the async processes to finish and reset procs dynamic array to 0
 	if (!nob_procs_flush(&procs)){
 		nob_log(NOB_ERROR, "Parallel source build failed");
-		return FAILED;
+		result = FAILED;
+		goto defer;
 	}
 
-	for (size_t i = 0; i < NOB_ARRAY_LEN(targets); ++i){
-		nob_cc_inputs(cmd, targets[i].bin_path);
-	}
-
+defer:
 	nob_cmd_free(obj_cmd);
 	nob_da_free(procs);
-	return SUCCESS;
+	nob_da_free(file_list);
+	return result;
 }
 
 

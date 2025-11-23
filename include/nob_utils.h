@@ -92,6 +92,31 @@ defer:
 	nob_da_free(children);
 }
 
+Nob_String_View get_file_name_no_extension(const char *file_path){
+	Nob_String_View sv = nob_sv_from_cstr(file_path);
+	unsigned int last_slash = 0;
+	unsigned int last_dot = 0;
+	for (unsigned i = 0; i < sv.count; ++i){
+		if (file_path[i] == '/') last_slash = i;
+		if (file_path[i] == '\\') last_slash = i;
+		if (file_path[i] == '.') last_dot = i;
+	}
+
+	sv.data = file_path + last_slash;
+	if (last_dot > last_slash){
+		sv.count = last_dot - last_slash;
+	}
+	return sv;
+}
+
+char *nob_temp_cstr_from_string_view(Nob_String_View *sv){
+	char *result = (char*)nob_temp_alloc(sv->count + 1);
+	if (result == NULL) return result;
+	memcpy(result, sv->data, sv->count);
+	result[sv->count] = '\0';
+	return result;
+}
+
 void nob_cmd_make(Nob_Cmd *cmd){
 #if defined(__MINGW32__)
 	nob_cmd_append(cmd, "mingw32-make");
