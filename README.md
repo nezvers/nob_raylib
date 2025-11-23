@@ -1,8 +1,14 @@
 # Raylib template with nob.h
-No need for Cmake or make to automate C project build, unless you want to include library that requires them.    
-Project build automation is built on top of [nob.h](https://github.com/tsoding/nob.h) library. Control  project and build process in single C language.    
+
+## Features
+- All 100% C build system. Easily implement project scaling.
+- Ability to debug project builder.
+- No need for Cmake to automate C project build. Unless including projects that require it.    
+- Project build automation is built on top of [nob.h](https://github.com/tsoding/nob.h) library.    
+- "Passive" hot-reload with [adjust.h](https://github.com/bi3mer/adjust.h)
+- Template supports platforms: Windows, Linux (X11). More to come.
     
-The only requirements are:    
+## The only requirements are:    
 - C compiler (gcc, clang, msvc, mingw, tinyc)
 - `make` or `mingw32-make`    
 - `gdb` for debugging    
@@ -14,15 +20,12 @@ The only requirements are:
 3. Extend `nob.c` build script as your project grows.
 
 ## Build options
-- Pass `-debug` argument for debug build    
+- `-debug` argument to enable debug build    
     ```./nob -debug```    
-- Pass `-name` with `"Name"` to build executable with your provided name.    
+- `-name` with `"Name"` to build executable with your provided name (default:"nob_raylib").    
     ```./nob -name "Raylib Template"```
-
-## Features
-- All C build system. Easily implement project scaling.
-- "Passive" hot-reload with [adjust.h](https://github.com/bi3mer/adjust.h)
-- Supports platforms: Windows, Linux (X11). More to come.
+- `-platform` to select build for target platform [`desktop`, `web` (in-progress) ] (default:"desktop").    
+    ```./nob -platform desktop```
 
 ## Compilation hints
 - On Linux if you get Raylib compilation error for `X11` you need to install dependencies recommended by [GLFW](https://www.glfw.org/docs/latest/compile.html)
