@@ -71,6 +71,27 @@ enum RESULT delete_directory(const char *dir_path){
 	return SUCCESS;
 }
 
+void nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, const char *extension){
+	Nob_File_Type type = nob_get_file_type(dir_path);
+	if (type < 0) return;
+	if (type != NOB_FILE_DIRECTORY) return;
+	
+	Nob_File_Paths children = {0};
+	if (!nob_read_entire_dir(dir_path, &children)) goto defer;
+	
+	for (size_t i = 0; i < children.count; ++i){
+		if (extension == NULL){
+			nob_da_append(file_list, children.items[i]);
+		}
+		else if (nob_sv_end_with(nob_sv_from_cstr(children.items[i]), extension)){
+			nob_da_append(file_list, children.items[i]);
+		}
+	}
+
+defer:
+	nob_da_free(children);
+}
+
 void nob_cmd_make(Nob_Cmd *cmd){
 #if defined(__MINGW32__)
 	nob_cmd_append(cmd, "mingw32-make");
@@ -109,6 +130,25 @@ void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *d
 	if (debug) nob_cmd_append(cmd, "-g");
 	nob_cmd_append(cmd, "-shared", "-o");
 	nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.so", directory, name));
+#endif
+}
+
+void nob_cmd_output_static_library(Nob_Cmd *cmd, const char *name, const char *directory, bool debug){
+#if defined(WINDOWS)
+	#if defined(_MSC_VER)
+		// TODO: add missing MSVC flags
+		
+		nob_cmd_append(cmd, nob_temp_sprintf("/F%s", directory));
+		nob_cmd_append(cmd, nob_temp_sprintf("/Fe%slib%s.lib", directory, name));
+	#else
+		nob_cmd_append(cmd, "ar", "rcs");
+		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.a", directory, name));
+		if (debug) nob_cmd_append(cmd, "-g");
+	#endif
+#elif defined(LINUX)
+	nob_cmd_append(cmd, "ar", "rcs");
+	nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.a", directory, name));
+	if (debug) nob_cmd_append(cmd, "-g");
 #endif
 }
 
