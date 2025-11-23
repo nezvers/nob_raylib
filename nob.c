@@ -181,6 +181,7 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 		// nob_cmd_append(&emsdk_cmd, "powershell", ".\\emsdk.ps1", "install", "latest");
 		nob_cmd_append(&emsdk_cmd, "cmd", "/c", ".\\emsdk.bat", "install", "latest");
 		bool install_success = nob_cmd_run(&emsdk_cmd);
+		nob_cmd_free(emsdk_cmd);
 #elif defined(LINUX)
 		system("./emsdk install latest");
 #endif
@@ -296,6 +297,9 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 	for (size_t i = 0; i < NOB_ARRAY_LEN(targets); ++i){
 		nob_cc_inputs(cmd, targets[i].bin_path);
 	}
+
+	nob_cmd_free(obj_cmd);
+	nob_da_free(procs);
 	return SUCCESS;
 }
 
@@ -366,6 +370,8 @@ int main(int argc, char **argv){
 	if (save_binary(&current_config, sizeof(current_config), BUILD_FOLDER CONFIG_FILE_NAME, config_version) == FAILED){
 		return FAILED;
 	}
+
+	nob_cmd_free(cmd);
 
 	return SUCCESS;
 }
