@@ -61,24 +61,25 @@ const char *get_raylib_platform(enum PLATFORM_TARGET platform){
 }
 
 enum RESULT setup_raylib(Nob_Cmd *cmd){
+	enum RESULT result = SUCCESS;
 	const char *raylib_url = "https://github.com/raysan5/raylib/archive/refs/tags/" RAYLIB_TAG ".tar.gz";
 
 	// Download
 	if (!nob_file_exists(RAYLIB_ARCHIVE)){
 		if (download_file(raylib_url, RAYLIB_ARCHIVE) == FAILED){
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 		if (!nob_file_exists(RAYLIB_ARCHIVE)){
 			nob_log(NOB_ERROR, "Just downloaded file dissapeared");
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 	}
 
 	// Extract
-	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER RAYLIB_DIR_NAME)) return FAILED;
+	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER RAYLIB_DIR_NAME)) nob_return_defer(FAILED);
 	if (!nob_file_exists(DEPENDENCY_FOLDER RAYLIB_DIR_NAME "README.md")){
 		if(extract_tar_archive(RAYLIB_ARCHIVE, DEPENDENCY_FOLDER RAYLIB_DIR_NAME, 1)){
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 	}
 
@@ -88,7 +89,7 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 		nob_log(NOB_INFO, "Changing directory: %s ", RAYLIB_SRC_DIR);
 		if (!nob_set_current_dir(nob_temp_sprintf("./%s", RAYLIB_SRC_DIR))){
 			nob_log(NOB_ERROR, "Failed to change to directory: %s", RAYLIB_SRC_DIR);
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 
 		nob_cmd_make(cmd);
@@ -100,20 +101,21 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 		nob_log(NOB_INFO, "Changing directory: %s ", "../../../");
 		if (!nob_set_current_dir("../../../")){
 			nob_log(NOB_ERROR, "Failed to move back to root directory");
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 		if (!compile_success){
 			nob_log(NOB_ERROR, "Failed to compile raylib");
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 	}
 
 	if (!nob_file_exists(RAYLIB_SRC_DIR "libraylib.a")){
 		nob_log(NOB_ERROR, "libraylib.a disappeared!!!");
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
 
-	return SUCCESS;
+defer:
+	return result;
 }
 
 void get_include_raylib(Nob_Cmd *cmd){
@@ -143,6 +145,7 @@ void link_raylib(Nob_Cmd *cmd){
 //---------------------------------------------------------------------------------
 // Emscripten
 enum RESULT setup_emscripten(Nob_Cmd *cmd){
+	enum RESULT result = SUCCESS;
 	const char *emscripten_git = "https://github.com/emscripten-core/emsdk.git";
 	const char *emsdk_tar = "https://github.com/emscripten-core/emsdk/archive/refs/tags/" EMSCRIPTEN_TAG ".tar.gz";
 	// EMSCRIPTEN_TAG
@@ -154,19 +157,19 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 	// Download
 	if (!nob_file_exists(EMSCRIPTEN_ARCHIVE)){
 		if (download_file(emsdk_tar, EMSCRIPTEN_ARCHIVE) == FAILED){
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 		if (!nob_file_exists(EMSCRIPTEN_ARCHIVE)){
 			nob_log(NOB_ERROR, "Just downloaded file dissapeared");
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 	}
 
 	// Extract
-	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME)) return FAILED;
+	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME)) nob_return_defer(FAILED);
 	if (!nob_file_exists(DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME "README.md")){
 		if(extract_tar_archive(EMSCRIPTEN_ARCHIVE, DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME, 1)){
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 	}
 
@@ -174,7 +177,7 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 		nob_log(NOB_INFO, "Changing directory: %s ", EMSCRIPTEN_SRC_DIR);
 		if (!nob_set_current_dir(EMSCRIPTEN_SRC_DIR)){
 			nob_log(NOB_ERROR, "Failed to change to directory: %s", EMSCRIPTEN_SRC_DIR);
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 		
 		nob_log(NOB_INFO, "EMSDK first time installation - latest");
@@ -193,41 +196,43 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 		nob_log(NOB_INFO, "Changing directory: %s ", "../../");
 		if (!nob_set_current_dir("../../")){
 			nob_log(NOB_ERROR, "Failed to move back to root directory");
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
-		if (!install_success) {return FAILED;}
+		if (!install_success) nob_return_defer(FAILED);
 	}
 
 	nob_log(NOB_INFO, "EMSDK activate environment");
 #if defined(WINDOWS)
 	char emsdk_dir[128] = EMSCRIPTEN_SRC_DIR;
 	swap_dir_slashes(emsdk_dir, sizeof(emsdk_dir));
-	if (system(nob_temp_sprintf("%semsdk.bat activate latest", emsdk_dir)) != 0){return FAILED;}
-	if (system(nob_temp_sprintf("%semsdk_env.bat", emsdk_dir)) != 0){return FAILED;}
+	if (system(nob_temp_sprintf("%semsdk.bat activate latest", emsdk_dir)) != 0){nob_return_defer(FAILED);}
+	if (system(nob_temp_sprintf("%semsdk_env.bat", emsdk_dir)) != 0){nob_return_defer(FAILED);}
 #elif defined(LINUX)
-	if (system(EMSCRIPTEN_SRC_DIR "emsdk activate latest") != 0){return FAILED;}
-	if (system("source " EMSCRIPTEN_SRC_DIR "emsdk_env.sh") != 0){return FAILED;}
+	if (system(EMSCRIPTEN_SRC_DIR "emsdk activate latest") != 0){nob_return_defer(FAILED);}
+	if (system("source " EMSCRIPTEN_SRC_DIR "emsdk_env.sh") != 0){nob_return_defer(FAILED);}
 #endif
 
-	return SUCCESS;
+defer:
+	return result;
 }
 
 enum RESULT setup_web(Nob_Cmd *cmd){
-	if (setup_emscripten(cmd) == FAILED){
-		return FAILED;
-	}
+	enum RESULT result = SUCCESS;
+	if (setup_emscripten(cmd) == FAILED) nob_return_defer(FAILED);
 
-	if (!nob_mkdir_if_not_exists(WEB_FOLDER)) return FAILED;
+	if (!nob_mkdir_if_not_exists(WEB_FOLDER)) nob_return_defer(FAILED);
 	if (nob_file_exists(WEB_FOLDER RESOURCES_FOLDER)){
 		if (delete_directory(WEB_FOLDER RESOURCES_FOLDER) == FAILED){
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 	}
-	if (!nob_mkdir_if_not_exists(WEB_FOLDER RESOURCES_FOLDER)) return FAILED;
+	if (!nob_mkdir_if_not_exists(WEB_FOLDER RESOURCES_FOLDER)) nob_return_defer(FAILED);
+
 	if (!nob_copy_directory_recursively(RESOURCES_FOLDER, WEB_FOLDER RESOURCES_FOLDER)){
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
 
+defer:
 	return SUCCESS;
 }
 //---------------------------------------------------------------------------------
@@ -268,7 +273,7 @@ void get_defines(Nob_Cmd *cmd){
 }
 
 void link_platform(Nob_Cmd *cmd){
-	#if defined(WINDOWS)
+#if defined(WINDOWS)
 	nob_cmd_append(cmd, "-lwinmm", "-lgdi32", "-lole32");
 #elif defined(LINUX)
 	nob_cmd_append(cmd, "-lm", "-ldl", "-flto=auto", "-lpthread");
@@ -289,7 +294,7 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 	};
 
 	Nob_File_Paths file_list = {0};
-	nob_fetch_files(SOURCE_FOLDER, &file_list, ".c");
+	if (nob_fetch_files(SOURCE_FOLDER, &file_list, ".c") == FAILED) nob_return_defer(FAILED);
 	for (int i = 0; i < file_list.count; ++i){
 		Nob_String_View src_file = get_file_name_no_extension(file_list.items[i]);
 		const char * src_name = nob_temp_cstr_from_string_view(&src_file);

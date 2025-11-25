@@ -51,6 +51,7 @@ void swap_dir_slashes(char *dir_path, int length){
 }
 
 enum RESULT delete_directory(const char *dir_path){
+	enum RESULT result;
 #if defined(WINDOWS)
 	char dir_buffer[1024] = {0};
 	snprintf(dir_buffer, sizeof(dir_buffer) / sizeof(dir_buffer[0]), "%s", dir_path);
@@ -58,26 +59,28 @@ enum RESULT delete_directory(const char *dir_path){
 	// explicitly call from cmd.exe otherwise gives error
 	if (system(nob_temp_sprintf("cmd.exe /c \"rmdir /s /q %s \"", dir_buffer)) == FAILED){
 		nob_log(NOB_ERROR, "Failed to delete a directory: %s", dir_path);
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
 #elif defined(LINUX)
 	Nob_Cmd rm_cmd = {0};
 	nob_cmd_append(&rm_cmd, "rm", "-rf", dir_path, "||", "true");
 	if (!nob_cmd_run(&rm_cmd)){
 		nob_log(NOB_ERROR, "Failed to delete a directory: %s", dir_path);
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
 #endif
-	return SUCCESS;
+defer:
+	return result;
 }
 
-void nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, const char *extension){
+enum RESULT nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, const char *extension){
+	enum RESULT result;
 	Nob_File_Type type = nob_get_file_type(dir_path);
-	if (type < 0) return;
-	if (type != NOB_FILE_DIRECTORY) return;
+	if (type < 0) nob_return_defer(FAILED);
+	if (type != NOB_FILE_DIRECTORY) nob_return_defer(FAILED);
 	
 	Nob_File_Paths children = {0};
-	if (!nob_read_entire_dir(dir_path, &children)) goto defer;
+	if (!nob_read_entire_dir(dir_path, &children)) nob_return_defer(FAILED);
 	
 	for (size_t i = 0; i < children.count; ++i){
 		if (extension == NULL){
@@ -90,6 +93,7 @@ void nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, const char
 
 defer:
 	nob_da_free(children);
+	return result;
 }
 
 Nob_String_View get_file_name_no_extension(const char *file_path){
@@ -178,67 +182,66 @@ void nob_cmd_output_static_library(Nob_Cmd *cmd, const char *name, const char *d
 }
 
 enum RESULT save_binary(const void *buffer, size_t size, const char *file_path, int bin_version){
+	enum RESULT result;
 	FILE *file = fopen(file_path, "wb");
     if (!file) {
         nob_log(NOB_ERROR, "Open file to save: %s ", file_path);
-    	fclose(file);
-        return FAILED;
+        nob_return_defer(FAILED);
     }
 
 	if (fwrite(&bin_version, sizeof(bin_version), 1, file) == 0){
         nob_log(NOB_ERROR, "Couldn't save file bin version: %s ", file_path);
-    	fclose(file);
-		return FAILED;
+    	nob_return_defer(FAILED);
 	}
 
 	if (fwrite(buffer, size, 1, file) == 0){
         nob_log(NOB_ERROR, "Couldn't save file: %s ", file_path);
-   		fclose(file);
-		return FAILED;
+   		nob_return_defer(FAILED);
 	}
-    fclose(file);
 
 	nob_log(NOB_INFO, "Successful save file: %s ", file_path);
-	return SUCCESS;
+defer:
+	if (file != NULL) fclose(file);
+	return result;
 }
 
 enum RESULT load_binary(void *buffer, size_t size, const char *file_path, int bin_version){
+	enum RESULT result;
 	if (!nob_file_exists(file_path)){
 		nob_log(NOB_INFO, "File to load doesn't exist: %s", file_path);
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
 	FILE *file = fopen(file_path, "rb");
     if (!file) {
         nob_log(NOB_ERROR, "Open file to load: %s ", file_path);
-        return FAILED;
+        nob_return_defer(FAILED);
     }
 	
 	int saved_version;
 	if (fread(&saved_version, sizeof(saved_version), 1, file) == 0){
 		nob_log(NOB_ERROR, "Couldn't load file bin version: %s ", file_path);
-    	fclose(file);
-        return FAILED;
+    	nob_return_defer(FAILED);
 	}
 
 	if (saved_version != bin_version){
 		nob_log(NOB_INFO, "File bin version missmatch (skip loading): %s (%d != %d)", file_path, saved_version, bin_version);
-    	fclose(file);
-        return FAILED;
+    	nob_return_defer(FAILED);
 	}
 
 	if (fread(buffer, size, 1, file) == 0){
 		nob_log(NOB_ERROR, "Couldn't load file: %s ", file_path);
-    	fclose(file);
-        return FAILED;
+    	nob_return_defer(FAILED);
 	}
-    fclose(file);
 
 	nob_log(NOB_INFO, "Successful load file: %s ", file_path);
-	return SUCCESS;
+defer:
+	if (file != NULL) fclose(file);
+	return result;
 }
 
 // Downloads file using curl or fallbacks to wget
 enum RESULT download_file(const char *url, const char *dest) {
+	enum RESULT result;
 	char download_cmd[2048] = {0};
 	snprintf(download_cmd, sizeof(download_cmd), "curl -fsSL \"%s\" -o \"%s\"", url, dest);
 	nob_log(NOB_INFO, "Downloading file: %s", dest);
@@ -246,36 +249,42 @@ enum RESULT download_file(const char *url, const char *dest) {
 		snprintf(download_cmd, sizeof(download_cmd), "wget -q \"%s\" -O \"%s\"", url, dest);
 		if (system(download_cmd) == FAILED) {
 			nob_log(NOB_ERROR, "Failed to download %s\n", url);
-			return FAILED;
+			nob_return_defer(FAILED);
 		}
 	}
-	return SUCCESS;
+defer:
+	return result;
 }
 
 enum RESULT extract_tar_archive(const char *archive_path, const char *target_dir, unsigned int strip_lvl){
+	enum RESULT result;
 	char tar_cmd[2048] = {0};
 	snprintf(tar_cmd, sizeof(tar_cmd), "tar -xzf \"%s\" -C \"%s\" --strip-components=%d", archive_path, target_dir, strip_lvl);
 
-	if (system(tar_cmd)){
+	if (system(tar_cmd) != 0){
 		nob_log(NOB_ERROR, "Failed to extract: %s -> %s\nCMD: %s", archive_path, target_dir, tar_cmd);
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
-	return SUCCESS;
+defer:
+	return result;
 }
 
 enum RESULT extract_zip_archive(const char *archive_path, const char *target_dir, unsigned int strip_lvl){
+	enum RESULT result;
 	char zip_cmd[2048] = {0};
 	// snprintf(zip_cmd, sizeof(zip_cmd), "powershell -command \"Expand-Archive -Force '%s' '%s'", archive_path, target_dir);
 	snprintf(zip_cmd, sizeof(zip_cmd), "tar -xf \"%s\" -C \"%s\" --strip-components=%d", archive_path, target_dir, strip_lvl);
 
 	if (system(zip_cmd)){
 		nob_log(NOB_ERROR, "Failed to extract: %s -> %s\nCMD: %s", archive_path, target_dir, zip_cmd);
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
-	return SUCCESS;
+defer:
+	return result;
 }
 
 enum RESULT git_clone(const char *git_repo, const char *tag, unsigned int depth, bool recursive, bool single_branch){
+	enum RESULT result;
     Nob_Cmd git_cmd = {0};
     nob_cmd_append(&git_cmd, "git", "clone");
     if (recursive) nob_cmd_append(&git_cmd, "--recursive");
@@ -283,9 +292,10 @@ enum RESULT git_clone(const char *git_repo, const char *tag, unsigned int depth,
     if (tag != NULL) nob_cmd_append(&git_cmd, "--branch", nob_temp_sprintf("%s", tag));
     if (depth != 0) nob_cmd_append(&git_cmd, "--depth", nob_temp_sprintf("%d", depth));
     nob_cmd_append(&git_cmd, git_repo);
-    if (!nob_cmd_run(&git_cmd)) return FAILED;
+    if (!nob_cmd_run(&git_cmd)) nob_return_defer(FAILED);
 
-    return SUCCESS;
+defer:
+	return result;
 }
 
 #endif //NOB_UTILS_H
