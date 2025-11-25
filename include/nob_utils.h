@@ -52,6 +52,7 @@ void swap_dir_slashes(char *dir_path, int length){
 
 enum RESULT delete_directory(const char *dir_path){
 	enum RESULT result;
+	size_t temp_checkpoint = nob_temp_save();
 #if defined(WINDOWS)
 	char dir_buffer[1024] = {0};
 	snprintf(dir_buffer, sizeof(dir_buffer) / sizeof(dir_buffer[0]), "%s", dir_path);
@@ -70,6 +71,7 @@ enum RESULT delete_directory(const char *dir_path){
 	}
 #endif
 defer:
+	nob_temp_rewind(temp_checkpoint);
 	return result;
 }
 
@@ -141,6 +143,7 @@ void nob_cmd_output_shared_object(Nob_Cmd *cmd, const char *src_path, const char
 }
 
 void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *directory, bool debug){
+	size_t temp_checkpoint = nob_temp_save();
 #if defined(WINDOWS)
 	#if defined(_MSC_VER)
 		// TODO: add missing MSVC flags
@@ -160,9 +163,11 @@ void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *d
 	nob_cmd_append(cmd, "-shared", "-o");
 	nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.so", directory, name));
 #endif
+	nob_temp_rewind(temp_checkpoint);
 }
 
 void nob_cmd_output_static_library(Nob_Cmd *cmd, const char *name, const char *directory, bool debug){
+	size_t temp_checkpoint = nob_temp_save();
 #if defined(WINDOWS)
 	#if defined(_MSC_VER)
 		// TODO: add missing MSVC flags
@@ -179,6 +184,7 @@ void nob_cmd_output_static_library(Nob_Cmd *cmd, const char *name, const char *d
 	nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.a", directory, name));
 	if (debug) nob_cmd_append(cmd, "-g");
 #endif
+	nob_temp_rewind(temp_checkpoint);
 }
 
 enum RESULT save_binary(const void *buffer, size_t size, const char *file_path, int bin_version){
@@ -284,6 +290,7 @@ defer:
 }
 
 enum RESULT git_clone(const char *git_repo, const char *tag, unsigned int depth, bool recursive, bool single_branch){
+	size_t temp_checkpoint = nob_temp_save();
 	enum RESULT result;
     Nob_Cmd git_cmd = {0};
     nob_cmd_append(&git_cmd, "git", "clone");
@@ -295,6 +302,7 @@ enum RESULT git_clone(const char *git_repo, const char *tag, unsigned int depth,
     if (!nob_cmd_run(&git_cmd)) nob_return_defer(FAILED);
 
 defer:
+	nob_temp_rewind(temp_checkpoint);
 	return result;
 }
 

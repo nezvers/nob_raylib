@@ -62,6 +62,7 @@ const char *get_raylib_platform(enum PLATFORM_TARGET platform){
 
 enum RESULT setup_raylib(Nob_Cmd *cmd){
 	enum RESULT result = SUCCESS;
+	size_t temp_checkpoint = nob_temp_save();
 	const char *raylib_url = "https://github.com/raysan5/raylib/archive/refs/tags/" RAYLIB_TAG ".tar.gz";
 
 	// Download
@@ -115,6 +116,7 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 	}
 
 defer:
+	nob_temp_rewind(temp_checkpoint);
 	return result;
 }
 
@@ -146,6 +148,7 @@ void link_raylib(Nob_Cmd *cmd){
 // Emscripten
 enum RESULT setup_emscripten(Nob_Cmd *cmd){
 	enum RESULT result = SUCCESS;
+	size_t temp_checkpoint = nob_temp_save();
 	const char *emscripten_git = "https://github.com/emscripten-core/emsdk.git";
 	const char *emsdk_tar = "https://github.com/emscripten-core/emsdk/archive/refs/tags/" EMSCRIPTEN_TAG ".tar.gz";
 	// EMSCRIPTEN_TAG
@@ -214,6 +217,7 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 #endif
 
 defer:
+	nob_temp_rewind(temp_checkpoint);
 	return result;
 }
 
@@ -234,7 +238,7 @@ enum RESULT setup_web(Nob_Cmd *cmd){
 	}
 
 defer:
-	return SUCCESS;
+	return result;
 }
 //---------------------------------------------------------------------------------
 // Source
@@ -243,6 +247,7 @@ void get_include_directories(Nob_Cmd *cmd){
 }
 
 void get_defines(Nob_Cmd *cmd){
+	size_t temp_checkpoint = nob_temp_save();
 	if (current_config.is_debug){
 		// Debug symbols
 		nob_cmd_append(cmd, "-g");
@@ -271,6 +276,7 @@ void get_defines(Nob_Cmd *cmd){
 		nob_cmd_append(cmd, "--preload-file", RESOURCES_FOLDER);
 		nob_cmd_append(cmd, "--shell-file", "../minshell.html");
 	}
+	nob_temp_rewind(temp_checkpoint);
 }
 
 void link_platform(Nob_Cmd *cmd){
@@ -324,6 +330,7 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 	}
 
 defer:
+	nob_temp_rewind(temp_checkpoint);
 	nob_cmd_free(obj_cmd);
 	nob_da_free(procs);
 	nob_da_free(file_list);
