@@ -68,10 +68,12 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 	// Download
 	if (!nob_file_exists(RAYLIB_ARCHIVE)){
 		if (download_file(raylib_url, RAYLIB_ARCHIVE) == FAILED){
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 		if (!nob_file_exists(RAYLIB_ARCHIVE)){
 			nob_log(NOB_ERROR, "Just downloaded file dissapeared");
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 	}
@@ -80,6 +82,7 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER RAYLIB_DIR_NAME)) nob_return_defer(FAILED);
 	if (!nob_file_exists(DEPENDENCY_FOLDER RAYLIB_DIR_NAME "README.md")){
 		if(extract_tar_archive(RAYLIB_ARCHIVE, DEPENDENCY_FOLDER RAYLIB_DIR_NAME, 1)){
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 	}
@@ -90,6 +93,7 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 		nob_log(NOB_INFO, "Changing directory: %s ", RAYLIB_SRC_DIR);
 		if (!nob_set_current_dir(nob_temp_sprintf("./%s", RAYLIB_SRC_DIR))){
 			nob_log(NOB_ERROR, "Failed to change to directory: %s", RAYLIB_SRC_DIR);
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 
@@ -102,16 +106,19 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 		nob_log(NOB_INFO, "Changing directory: %s ", "../../../");
 		if (!nob_set_current_dir("../../../")){
 			nob_log(NOB_ERROR, "Failed to move back to root directory");
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 		if (!compile_success){
 			nob_log(NOB_ERROR, "Failed to compile raylib");
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 	}
 
 	if (!nob_file_exists(RAYLIB_SRC_DIR "libraylib.a")){
 		nob_log(NOB_ERROR, "libraylib.a disappeared!!!");
+		assert(false);
 		nob_return_defer(FAILED);
 	}
 
@@ -160,10 +167,12 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 	// Download
 	if (!nob_file_exists(EMSCRIPTEN_ARCHIVE)){
 		if (download_file(emsdk_tar, EMSCRIPTEN_ARCHIVE) == FAILED){
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 		if (!nob_file_exists(EMSCRIPTEN_ARCHIVE)){
 			nob_log(NOB_ERROR, "Just downloaded file dissapeared");
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 	}
@@ -172,6 +181,7 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME)) nob_return_defer(FAILED);
 	if (!nob_file_exists(DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME "README.md")){
 		if(extract_tar_archive(EMSCRIPTEN_ARCHIVE, DEPENDENCY_FOLDER EMSCRIPTEN_DIR_NAME, 1)){
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 	}
@@ -180,6 +190,7 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 		nob_log(NOB_INFO, "Changing directory: %s ", EMSCRIPTEN_SRC_DIR);
 		if (!nob_set_current_dir(EMSCRIPTEN_SRC_DIR)){
 			nob_log(NOB_ERROR, "Failed to change to directory: %s", EMSCRIPTEN_SRC_DIR);
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 		
@@ -200,6 +211,7 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 		nob_log(NOB_INFO, "Changing directory: %s ", "../../");
 		if (!nob_set_current_dir("../../")){
 			nob_log(NOB_ERROR, "Failed to move back to root directory");
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 		if (!install_success) nob_return_defer(FAILED);
@@ -228,12 +240,14 @@ enum RESULT setup_web(Nob_Cmd *cmd){
 	if (!nob_mkdir_if_not_exists(WEB_FOLDER)) nob_return_defer(FAILED);
 	if (nob_file_exists(WEB_FOLDER RESOURCES_FOLDER)){
 		if (delete_directory(WEB_FOLDER RESOURCES_FOLDER) == FAILED){
+			assert(false);
 			nob_return_defer(FAILED);
 		}
 	}
 	if (!nob_mkdir_if_not_exists(WEB_FOLDER RESOURCES_FOLDER)) nob_return_defer(FAILED);
 
 	if (!nob_copy_directory_recursively(RESOURCES_FOLDER, WEB_FOLDER RESOURCES_FOLDER)){
+		assert(false);
 		nob_return_defer(FAILED);
 	}
 
@@ -301,7 +315,10 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 	};
 
 	Nob_File_Paths file_list = {0};
-	if (nob_fetch_files(SOURCE_FOLDER, &file_list, ".c") == FAILED) nob_return_defer(FAILED);
+	if (nob_fetch_files(SOURCE_FOLDER, &file_list, ".c") == FAILED){
+		assert(false);
+		nob_return_defer(FAILED);
+	}
 	for (int i = 0; i < file_list.count; ++i){
 		Nob_String_View src_file = get_file_name_no_extension(file_list.items[i]);
 		const char * src_name = nob_temp_cstr_from_string_view(&src_file);
@@ -316,8 +333,8 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 		get_include_directories(&obj_cmd);
 		if (!nob_cmd_run(&obj_cmd, .async = &procs)){
 			nob_log(NOB_ERROR, "Appending build to queue failed");
-			result = FAILED;
-			goto defer;
+			assert(false);
+			nob_return_defer(FAILED);
 		}
 		nob_cc_inputs(cmd, bin_path);
 	}
@@ -325,8 +342,8 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 	// Wait on all the async processes to finish and reset procs dynamic array to 0
 	if (!nob_procs_flush(&procs)){
 		nob_log(NOB_ERROR, "Parallel source build failed");
-		result = FAILED;
-		goto defer;
+		assert(false);
+		nob_return_defer(FAILED);
 	}
 
 defer:
@@ -350,6 +367,7 @@ int main(int argc, char **argv){
 		else if (strcmp(command_name, "-name") == 0){
 			if (!(argc > 0)){
 				nob_log(NOB_ERROR, "No project name provided after `project`");
+				assert(false);
 				return FAILED;
 			}
 			project_name = nob_shift(argv, argc);
@@ -357,6 +375,7 @@ int main(int argc, char **argv){
 		else if (strcmp(command_name, "-platform") == 0){
 			if (!(argc > 0)){
 				nob_log(NOB_ERROR, "No project name provided after `project`");
+				assert(false);
 				return FAILED;
 			}
 			const char *platform = nob_shift(argv, argc);
@@ -381,10 +400,16 @@ int main(int argc, char **argv){
 	Nob_Cmd cmd = {0};
 
 	if (current_config.platform == PLATFORM_WEB && setup_web(&cmd) == FAILED){
+		nob_log(NOB_ERROR, "Failed to setup web.");
+		assert(false);
 		return FAILED;
 	}
 
-	if (setup_raylib(&cmd) == FAILED) return FAILED;
+	if (setup_raylib(&cmd) == FAILED){
+		nob_log(NOB_ERROR, "Failed to setup RAYLIB.");
+		assert(false);
+		return FAILED;
+	}
 
 	// Compile project
 	nob_cc(&cmd);
@@ -396,12 +421,22 @@ int main(int argc, char **argv){
 		// Place in root folder, next to resources folder
 		nob_cc_output(&cmd, project_name);
 	}
-	if (get_source_files(&cmd)) return FAILED;
+	if (get_source_files(&cmd)){
+		nob_log(NOB_ERROR, "Failed to get source files");
+		assert(false);
+		return FAILED;
+	}
 	link_raylib(&cmd);
 
-	if (!nob_cmd_run(&cmd)) return FAILED;
+	if (!nob_cmd_run(&cmd)){
+		nob_log(NOB_ERROR, "Failed to compile app");
+		assert(false);
+		return FAILED;
+	}
 
 	if (save_binary(&current_config, sizeof(current_config), BUILD_FOLDER CONFIG_FILE_NAME, config_version) == FAILED){
+		nob_log(NOB_ERROR, "Failed to save config");
+		assert(false);
 		return FAILED;
 	}
 
