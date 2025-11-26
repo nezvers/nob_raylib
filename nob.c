@@ -135,9 +135,10 @@ void link_raylib(Nob_Cmd *cmd){
 	nob_cmd_append(cmd, "-L", RAYLIB_SRC_DIR, "-lraylib");
 
 	switch (current_config.platform){
-		case (PLATFORM_DESKTOP):
+		case (PLATFORM_DESKTOP_SDL):
 		case (PLATFORM_DESKTOP_GLFW):
 		case (PLATFORM_DESKTOP_RGFW):
+	    case (PLATFORM_DESKTOP):
 		// TODO: refactor to use the ones that are needed in context
 #if defined(WINDOWS)
 	#if defined(_MSC_VER)
@@ -148,6 +149,15 @@ void link_raylib(Nob_Cmd *cmd){
 #elif defined(LINUX)
 			nob_cmd_append(cmd, "-lm", "-ldl", "-lpthread", "-lGL", "-lX11");
 #endif
+			break;
+		case (PLATFORM_WEB):
+		    // TODO:
+			break;
+		case (PLATFORM_ANDROID):
+		    // TODO:
+			break;
+		case (PLATFORM_DRM):
+		    // TODO:
 			break;
 	}
 }
@@ -193,7 +203,7 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 			assert(false);
 			nob_return_defer(FAILED);
 		}
-		
+
 		nob_log(NOB_INFO, "EMSDK first time installation - latest");
 		bool install_success;
 #if defined(WINDOWS)
@@ -273,7 +283,7 @@ void get_defines(Nob_Cmd *cmd){
 				nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../" RESOURCES_FOLDER));
 				break;
 			default:
-				nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../" RESOURCES_FOLDER));	
+				nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../" RESOURCES_FOLDER));
 		}
 	}
 	else{
@@ -396,7 +406,7 @@ int main(int argc, char **argv){
 	if (load_binary(&saved_config, sizeof(saved_config), BUILD_FOLDER CONFIG_FILE_NAME, config_version) == 0){
 		previous_config = &saved_config;
 	}
-	
+
 	Nob_Cmd cmd = {0};
 
 	if (current_config.platform == PLATFORM_WEB && setup_web(&cmd) == FAILED){
