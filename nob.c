@@ -207,12 +207,8 @@ enum RESULT setup_emscripten(Nob_Cmd *cmd){
 		nob_log(NOB_INFO, "EMSDK first time installation - latest");
 		bool install_success;
 #if defined(WINDOWS)
-		// char emsdk_path[1024] = {0};
-		// snprintf(emsdk_path, sizeof(emsdk_path), "%s", nob_get_current_dir_temp());
-
 		Nob_Cmd emsdk_cmd = {0};
-		// nob_cmd_append(&emsdk_cmd, "powershell", ".\\emsdk.ps1", "install", "latest");
-		nob_cmd_append(&emsdk_cmd, "cmd", "/c", ".\\emsdk.bat", "install", "latest");
+		nob_cmd_append(&emsdk_cmd, ".\\emsdk.bat", "install", "latest");
 		install_success = nob_cmd_run(&emsdk_cmd);
 		nob_cmd_free(emsdk_cmd);
 #elif defined(LINUX)
