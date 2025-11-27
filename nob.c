@@ -287,6 +287,7 @@ void get_defines(Nob_Cmd *cmd){
 	}
 
 	if (current_config.platform == PLATFORM_WEB){
+		// TODO: This is more like placeholder
 		nob_cmd_append(cmd, "-Os", "-Wall");
 		nob_cmd_append(cmd, "-s", "USE_GLFW=3");
 		nob_cmd_append(cmd, "-s", "ASSERTIONS=1");
@@ -313,12 +314,6 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 	Nob_Procs procs = {0};
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
-	static struct {
-		const char *bin_path;
-		const char *src_path;
-	} targets[] = {
-		{ .bin_path = BIN_FOLDER"main.o", .src_path = SOURCE_FOLDER"main.c" },
-	};
 
 	Nob_File_Paths file_list = {0};
 	if (nob_fetch_files(SOURCE_FOLDER, &file_list, ".c") == FAILED){
@@ -326,6 +321,7 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 		nob_return_defer(FAILED);
 	}
 	for (int i = 0; i < file_list.count; ++i){
+		size_t temp_obj_checkpoint = nob_temp_save();
 		Nob_String_View src_file = get_file_name_no_extension(file_list.items[i]);
 		const char * src_name = nob_temp_cstr_from_string_view(&src_file);
 		// TODO: Add check if object files are changed
@@ -343,6 +339,7 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 			nob_return_defer(FAILED);
 		}
 		nob_cc_inputs(cmd, bin_path);
+		nob_temp_rewind(temp_obj_checkpoint);
 	}
 
 	// Wait on all the async processes to finish and reset procs dynamic array to 0

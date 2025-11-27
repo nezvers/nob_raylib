@@ -80,6 +80,7 @@ defer:
 enum RESULT nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, const char *extension){
 	enum RESULT result = SUCCESS;
 	Nob_File_Type type = nob_get_file_type(dir_path);
+	size_t temp_checkpoint = nob_temp_save();
 	if (type < 0) nob_return_defer(FAILED);
 	if (type != NOB_FILE_DIRECTORY) nob_return_defer(FAILED);
 	
@@ -96,6 +97,7 @@ enum RESULT nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, con
 	}
 
 defer:
+	nob_temp_rewind(temp_checkpoint);
 	nob_da_free(children);
 	return result;
 }
@@ -187,6 +189,68 @@ void nob_cmd_output_static_library(Nob_Cmd *cmd, const char *name, const char *d
 	if (debug) nob_cmd_append(cmd, "-g");
 #endif
 	nob_temp_rewind(temp_checkpoint);
+}
+
+void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source){
+	for (int i = 0; i < source->items; ++i){
+		nob_cmd_append(target, source->items[i]);
+	}
+}
+
+enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const char *source_dir, const char *output_dir, const char *src_extension, bool force_rebuild){
+	enum RESULT result = SUCCESS;
+	Nob_Cmd obj_cmd = {0};
+	Nob_Procs procs = {0};
+	Nob_File_Paths file_list = {0};
+	int rebuild_is_needed;
+	size_t temp_checkpoint = nob_temp_save();
+
+	if (nob_fetch_files(source_dir, &file_list, src_extension) == FAILED){
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+
+	const char *src_name;
+	const char *src_file_path;
+	const char *bin_path;
+	Nob_String_View src_file;
+	size_t temp_obj_checkpoint;
+	for (int i = 0; i < file_list.count; ++i){
+		temp_obj_checkpoint = nob_temp_save();
+		src_file = get_file_name_no_extension(file_list.items[i]);
+		src_name = nob_temp_cstr_from_string_view(&src_file);
+		src_file_path = nob_temp_cstr_from_string_view("%s%s%s", source_dir, src_name, src_extension);
+		bin_path = nob_temp_sprintf("%s%s.o", output_dir, src_name);
+		rebuild_is_needed = nob_needs_rebuild1(bin_path, src_file_path);
+		if (rebuild_is_needed < 0) nob_return_defer(FAILED);
+		if (rebuild_is_needed == 0 && !force_rebuild) continue;
+		
+		nob_cc(&obj_cmd);
+		nob_cmd_append(&obj_cmd, "-c", src_file_path);
+		nob_cmd_append(&obj_cmd, "-o", bin_path);
+		nob_cmd_append_cmd(&obj_cmd, item_cmd);
+		if (!nob_cmd_run(&obj_cmd, .async = &procs)){
+			nob_log(NOB_ERROR, "Appending build to queue failed: %s%s%s -> %s%s%s", source_dir, src_name, src_extension, output_dir, src_name, src_extension);
+			assert(false);
+			nob_return_defer(FAILED);
+		}
+		nob_cc_inputs(cmd, bin_path);
+		nob_temp_rewind(temp_obj_checkpoint);
+	}
+
+	// Wait on all the async processes to finish and reset procs dynamic array to 0
+	if (!nob_procs_flush(&procs)){
+		nob_log(NOB_ERROR, "Parallel source build failed dir: %s -> %s", source_dir, output_dir);
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+
+defer:
+	nob_temp_rewind(temp_checkpoint);
+	nob_cmd_free(obj_cmd);
+	nob_da_free(procs);
+	nob_da_free(file_list);
+	return result;
 }
 
 enum RESULT save_binary(const void *buffer, size_t size, const char *file_path, int bin_version){
