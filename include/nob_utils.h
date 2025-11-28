@@ -108,8 +108,8 @@ Nob_String_View get_file_name_no_extension(const char *file_path){
 	unsigned int last_dot = 0;
 	for (unsigned i = 0; i < sv.count; ++i){
 		if (file_path[i] == '/') last_slash = i;
-		if (file_path[i] == '\\') last_slash = i;
-		if (file_path[i] == '.') last_dot = i;
+		else if (file_path[i] == '\\') last_slash = i;
+		else if (file_path[i] == '.') last_dot = i;
 	}
 
 	sv.data = file_path + last_slash;
@@ -117,6 +117,20 @@ Nob_String_View get_file_name_no_extension(const char *file_path){
 		sv.count = last_dot - last_slash;
 	}
 	return sv;
+}
+
+// from/the/path/to/file -> from/the/path/to/
+void get_directory_path(char *buff, size_t size, const char *path){
+	unsigned int last_slash = 0;
+	for (int i = 0; i < size; ++i){
+		if (path[i] == '\0') break;
+		else if (path[i] == '/') last_slash = i;
+		else if (path[i] == '\\') last_slash = i;
+	}
+	for (int i = 0; i < last_slash +1; ++i){
+		buff[i] = path[i];
+	}
+	printf("%s", buff);
 }
 
 char *nob_temp_cstr_from_string_view(Nob_String_View *sv){
@@ -198,7 +212,7 @@ void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source){
 	}
 }
 
-enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const char *source_dir, const char *output_dir, const char *src_extension, bool force_rebuild){
+enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const char *source_dir, const char *output_dir, const char *src_extension, bool debug, bool shared, bool force_rebuild){
 	enum RESULT result = SUCCESS;
 	Nob_Cmd obj_cmd = {0};
 	Nob_Procs procs = {0};
@@ -218,10 +232,11 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const ch
 	size_t temp_obj_checkpoint;
 	for (int i = 0; i < file_list.count; ++i){
 		// TODO: handle temp memory with many source files
+		// TODO: Add MSVC flags
 		src_file = get_file_name_no_extension(file_list.items[i]);
 		src_name = nob_temp_cstr_from_string_view(&src_file);
 		src_file_path = nob_temp_sprintf("%s%s%s", source_dir, src_name, src_extension);
-		bin_path = nob_temp_sprintf("%s%s.o", output_dir, src_name); // <- probably need dedicated buffer for each library
+		bin_path = nob_temp_sprintf("%s%s.o", output_dir, src_name); // <- Gets stored for library. Probably need dedicated buffer for each library
 		rebuild_is_needed = nob_needs_rebuild1(bin_path, src_file_path);
 		if (rebuild_is_needed < 0) nob_return_defer(FAILED);
 		if (rebuild_is_needed == 0 && !force_rebuild) continue;
@@ -229,13 +244,15 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const ch
 		nob_cc(&obj_cmd);
 		nob_cmd_append(&obj_cmd, "-c", src_file_path);
 		nob_cmd_append(&obj_cmd, "-o", bin_path);
+		if (shared) nob_cmd_append(cmd, "-fpic");
+		if (debug) nob_cmd_append(cmd, "-g");
 		nob_cmd_append_cmd(&obj_cmd, item_cmd);
 		if (!nob_cmd_run(&obj_cmd, .async = &procs)){
 			nob_log(NOB_ERROR, "Appending build to queue failed: %s%s%s -> %s%s%s", source_dir, src_name, src_extension, output_dir, src_name, src_extension);
 			assert(false);
 			nob_return_defer(FAILED);
 		}
-		nob_cc_inputs(cmd, bin_path); // <- Potentially lost after freeing temp memory
+		nob_cc_inputs(cmd, bin_path); // <- Potentially used after free
 	}
 
 	// Wait on all the async processes to finish and reset procs dynamic array to 0

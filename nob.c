@@ -11,7 +11,7 @@
 #define SOURCE_FOLDER "src/"
 #define INCLUDE_FOLDER "include/"
 #define BUILD_FOLDER "build/"
-#define BIN_FOLDER BUILD_FOLDER "bin/"
+#define OBJ_FOLDER BUILD_FOLDER "obj/"
 #define WEB_FOLDER "web_build/"
 #define RESOURCES_FOLDER "resources/"
 #define DOWNLOAD_FOLDER "download/"
@@ -307,18 +307,20 @@ void link_platform(Nob_Cmd *cmd){
 }
 
 enum RESULT get_source_files(Nob_Cmd *cmd){
-	Nob_Cmd main_obj_cmd = {0};
 	enum RESULT result = SUCCESS;
+	Nob_Cmd main_obj_cmd = {0};
 	size_t temp_checkpoint = nob_temp_save();
+	
+	// Main
 	bool force_rebuild = false;
-
+	bool is_shared = false;
 	// commands for each obj file compilation
 	nob_cc_flags(&main_obj_cmd);
 	get_defines(&main_obj_cmd);
 	get_include_raylib(&main_obj_cmd);
 	get_include_directories(&main_obj_cmd);
 
-	if (nob_cmd_process_source_dir(cmd, &main_obj_cmd, SOURCE_FOLDER, BIN_FOLDER, ".c", force_rebuild) == FAILED){
+	if (nob_cmd_process_source_dir(cmd, &main_obj_cmd, SOURCE_FOLDER, OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building main.o");
 		assert(false);
 		nob_return_defer(FAILED);
@@ -333,6 +335,18 @@ defer:
 
 int main(int argc, char **argv){
 	NOB_GO_REBUILD_URSELF(argc, argv);
+	enum RESULT result = SUCCESS;
+	Nob_Cmd cmd = {0};
+	size_t temp_checkpoint = nob_temp_save();
+	char root_dir[1024] = {0};
+	snprintf(starting_cwd, sizeof(starting_cwd), "%s", nob_get_current_dir_temp());
+	nob_temp_rewind(temp_checkpoint);
+
+	// Set CWD to the project's root directory
+	get_directory_path(root_dir, sizeof(root_dir), argv[0]);
+	if (!nob_set_current_dir(root_dir)){
+		nob_return_defer(FAILED);
+	}
 
 	const char *program_name = nob_shift(argv, argc);
 	while (argc > 0){
@@ -344,7 +358,7 @@ int main(int argc, char **argv){
 			if (!(argc > 0)){
 				nob_log(NOB_ERROR, "No project name provided after `project`");
 				assert(false);
-				return FAILED;
+				nob_return_defer(FAILED);
 			}
 			project_name = nob_shift(argv, argc);
 		}
@@ -352,7 +366,7 @@ int main(int argc, char **argv){
 			if (!(argc > 0)){
 				nob_log(NOB_ERROR, "No project name provided after `project`");
 				assert(false);
-				return FAILED;
+				nob_return_defer(FAILED);
 			}
 			const char *platform = nob_shift(argv, argc);
 			if (strcmp(platform, "web") == 0){
@@ -361,30 +375,28 @@ int main(int argc, char **argv){
 		}
 	}
 
-	snprintf(starting_cwd, sizeof(starting_cwd), "%s", nob_get_current_dir_temp());
 
-	if (!nob_mkdir_if_not_exists(DOWNLOAD_FOLDER)) return FAILED;
-	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER)) return FAILED;
-	if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) return FAILED;
-	if (!nob_mkdir_if_not_exists(BIN_FOLDER)) return FAILED;
+	if (!nob_mkdir_if_not_exists(DOWNLOAD_FOLDER)) nob_return_defer(FAILED);
+	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER)) nob_return_defer(FAILED);
+	if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) nob_return_defer(FAILED);
+	if (!nob_mkdir_if_not_exists(OBJ_FOLDER)) nob_return_defer(FAILED);
 
 	struct SavedConfig saved_config = {0};
 	if (load_binary(&saved_config, sizeof(saved_config), BUILD_FOLDER CONFIG_FILE_NAME, config_version) == 0){
 		previous_config = &saved_config;
 	}
 
-	Nob_Cmd cmd = {0};
 
 	if (current_config.platform == PLATFORM_WEB && setup_web(&cmd) == FAILED){
 		nob_log(NOB_ERROR, "Failed to setup web.");
 		assert(false);
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
 
 	if (setup_raylib(&cmd) == FAILED){
 		nob_log(NOB_ERROR, "Failed to setup RAYLIB.");
 		assert(false);
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
 
 	// Compile project
@@ -400,23 +412,25 @@ int main(int argc, char **argv){
 	if (get_source_files(&cmd)){
 		nob_log(NOB_ERROR, "Failed to get source files");
 		assert(false);
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
 	link_raylib(&cmd);
 
 	if (!nob_cmd_run(&cmd)){
 		nob_log(NOB_ERROR, "Failed to compile app");
 		assert(false);
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
 
 	if (save_binary(&current_config, sizeof(current_config), BUILD_FOLDER CONFIG_FILE_NAME, config_version) == FAILED){
 		nob_log(NOB_ERROR, "Failed to save config");
 		assert(false);
-		return FAILED;
+		nob_return_defer(FAILED);
 	}
 
+defer:
+	nob_set_current_dir(starting_cwd);
 	nob_cmd_free(cmd);
-
-	return SUCCESS;
+	
+	return result;
 }
