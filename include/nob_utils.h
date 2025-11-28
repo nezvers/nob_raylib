@@ -192,8 +192,9 @@ void nob_cmd_output_static_library(Nob_Cmd *cmd, const char *name, const char *d
 }
 
 void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source){
-	for (int i = 0; i < source->items; ++i){
-		nob_cmd_append(target, source->items[i]);
+	for (int i = 0; i < source->count; ++i){
+		const char *item = source->items[i];
+		nob_cmd_append(target, item);
 	}
 }
 
@@ -216,11 +217,11 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const ch
 	Nob_String_View src_file;
 	size_t temp_obj_checkpoint;
 	for (int i = 0; i < file_list.count; ++i){
-		temp_obj_checkpoint = nob_temp_save();
+		// TODO: handle temp memory with many source files
 		src_file = get_file_name_no_extension(file_list.items[i]);
 		src_name = nob_temp_cstr_from_string_view(&src_file);
-		src_file_path = nob_temp_cstr_from_string_view("%s%s%s", source_dir, src_name, src_extension);
-		bin_path = nob_temp_sprintf("%s%s.o", output_dir, src_name);
+		src_file_path = nob_temp_sprintf("%s%s%s", source_dir, src_name, src_extension);
+		bin_path = nob_temp_sprintf("%s%s.o", output_dir, src_name); // <- probably need dedicated buffer for each library
 		rebuild_is_needed = nob_needs_rebuild1(bin_path, src_file_path);
 		if (rebuild_is_needed < 0) nob_return_defer(FAILED);
 		if (rebuild_is_needed == 0 && !force_rebuild) continue;
@@ -234,8 +235,7 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const ch
 			assert(false);
 			nob_return_defer(FAILED);
 		}
-		nob_cc_inputs(cmd, bin_path);
-		nob_temp_rewind(temp_obj_checkpoint);
+		nob_cc_inputs(cmd, bin_path); // <- Potentially lost after freeing temp memory
 	}
 
 	// Wait on all the async processes to finish and reset procs dynamic array to 0

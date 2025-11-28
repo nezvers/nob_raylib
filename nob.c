@@ -267,7 +267,6 @@ void get_include_directories(Nob_Cmd *cmd){
 }
 
 void get_defines(Nob_Cmd *cmd){
-	size_t temp_checkpoint = nob_temp_save();
 	if (current_config.is_debug){
 		// Debug symbols
 		nob_cmd_append(cmd, "-g");
@@ -276,14 +275,14 @@ void get_defines(Nob_Cmd *cmd){
 			case (PLATFORM_DESKTOP):
 			case (PLATFORM_DESKTOP_GLFW):
 			case (PLATFORM_DESKTOP_RGFW):
-				nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../" RESOURCES_FOLDER));
+				nob_cmd_append(cmd, "-D", "RESOURCES_PATH=../" RESOURCES_FOLDER);
 				break;
 			default:
-				nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", "../" RESOURCES_FOLDER));
+				nob_cmd_append(cmd, "-D", "RESOURCES_PATH=../" RESOURCES_FOLDER);
 		}
 	}
 	else{
-		nob_cmd_append(cmd, "-D", nob_temp_sprintf("RESOURCES_PATH=%s", RESOURCES_FOLDER));
+		nob_cmd_append(cmd, "-D", "RESOURCES_PATH=" RESOURCES_FOLDER);
 	}
 
 	if (current_config.platform == PLATFORM_WEB){
@@ -297,7 +296,6 @@ void get_defines(Nob_Cmd *cmd){
 		nob_cmd_append(cmd, "--preload-file", RESOURCES_FOLDER);
 		nob_cmd_append(cmd, "--shell-file", "../minshell.html");
 	}
-	nob_temp_rewind(temp_checkpoint);
 }
 
 void link_platform(Nob_Cmd *cmd){
@@ -309,51 +307,26 @@ void link_platform(Nob_Cmd *cmd){
 }
 
 enum RESULT get_source_files(Nob_Cmd *cmd){
-	// Build source objects in parallel
-	Nob_Cmd obj_cmd = {0};
-	Nob_Procs procs = {0};
+	Nob_Cmd main_obj_cmd = {0};
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
+	bool force_rebuild = false;
 
-	Nob_File_Paths file_list = {0};
-	if (nob_fetch_files(SOURCE_FOLDER, &file_list, ".c") == FAILED){
-		assert(false);
-		nob_return_defer(FAILED);
-	}
-	for (int i = 0; i < file_list.count; ++i){
-		size_t temp_obj_checkpoint = nob_temp_save();
-		Nob_String_View src_file = get_file_name_no_extension(file_list.items[i]);
-		const char * src_name = nob_temp_cstr_from_string_view(&src_file);
-		// TODO: Add check if object files are changed
-		nob_cc(&obj_cmd);
-		nob_cmd_append(&obj_cmd, "-c", nob_temp_sprintf("%s%s.c", SOURCE_FOLDER, src_name));
-		const char *bin_path = nob_temp_sprintf("%s%s.o", BIN_FOLDER, src_name);
-		nob_cmd_append(&obj_cmd, "-o", bin_path);
-		nob_cc_flags(&obj_cmd);
-		get_defines(&obj_cmd);
-		get_include_raylib(&obj_cmd);
-		get_include_directories(&obj_cmd);
-		if (!nob_cmd_run(&obj_cmd, .async = &procs)){
-			nob_log(NOB_ERROR, "Appending build to queue failed");
-			assert(false);
-			nob_return_defer(FAILED);
-		}
-		nob_cc_inputs(cmd, bin_path);
-		nob_temp_rewind(temp_obj_checkpoint);
-	}
+	// commands for each obj file compilation
+	nob_cc_flags(&main_obj_cmd);
+	get_defines(&main_obj_cmd);
+	get_include_raylib(&main_obj_cmd);
+	get_include_directories(&main_obj_cmd);
 
-	// Wait on all the async processes to finish and reset procs dynamic array to 0
-	if (!nob_procs_flush(&procs)){
-		nob_log(NOB_ERROR, "Parallel source build failed");
+	if (nob_cmd_process_source_dir(cmd, &main_obj_cmd, SOURCE_FOLDER, BIN_FOLDER, ".c", force_rebuild) == FAILED){
+		nob_log(NOB_ERROR, "Failed building main.o");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
 
 defer:
 	nob_temp_rewind(temp_checkpoint);
-	nob_cmd_free(obj_cmd);
-	nob_da_free(procs);
-	nob_da_free(file_list);
+	nob_cmd_free(main_obj_cmd);
 	return result;
 }
 
