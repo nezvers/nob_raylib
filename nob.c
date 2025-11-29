@@ -12,6 +12,7 @@
 #define INCLUDE_FOLDER "include/"
 #define BUILD_FOLDER "build/"
 #define OBJ_FOLDER BUILD_FOLDER "obj/"
+#define LIB_FOLDER BUILD_FOLDER "lib/"
 #define WEB_FOLDER "web_build/"
 #define RESOURCES_FOLDER "resources/"
 #define DOWNLOAD_FOLDER "download/"
@@ -267,10 +268,22 @@ void get_include_directories(Nob_Cmd *cmd){
 }
 
 void get_defines(Nob_Cmd *cmd){
+	if (current_config.platform == PLATFORM_WEB){
+		// TODO: This is more like placeholder
+		nob_cmd_append(cmd, "-Os", "-Wall");
+		nob_cmd_append(cmd, "-s", "USE_GLFW=3");
+		nob_cmd_append(cmd, "-s", "ASSERTIONS=1");
+		nob_cmd_append(cmd, "-s", "WASM=1");
+		nob_cmd_append(cmd, "-s", "TOTAL_MEMORY=67108864");
+		nob_cmd_append(cmd, "-s", "FORCE_FILESYSTEM=1");
+		nob_cmd_append(cmd, "--preload-file", RESOURCES_FOLDER);
+		nob_cmd_append(cmd, "--shell-file", "../minshell.html");
+		return;
+	}
 	if (current_config.is_debug){
 		// Debug symbols
-		nob_cmd_append(cmd, "-g");
-		nob_cmd_append(cmd, "-O0", "-DDEBUG");
+		nob_cmd_debug(cmd);
+		nob_cmd_append(cmd, "-DDEBUG");
 		switch (current_config.platform){
 			case (PLATFORM_DESKTOP):
 			case (PLATFORM_DESKTOP_GLFW):
@@ -282,20 +295,11 @@ void get_defines(Nob_Cmd *cmd){
 		}
 	}
 	else{
+		nob_cmd_append(cmd, "-DRELEASE");
+		nob_cmd_append(cmd, "-DMODE_PRODUCTION"); // disable adjust.h "passive" hotreload
 		nob_cmd_append(cmd, "-D", "RESOURCES_PATH=" RESOURCES_FOLDER);
 	}
-
-	if (current_config.platform == PLATFORM_WEB){
-		// TODO: This is more like placeholder
-		nob_cmd_append(cmd, "-Os", "-Wall");
-		nob_cmd_append(cmd, "-s", "USE_GLFW=3");
-		nob_cmd_append(cmd, "-s", "ASSERTIONS=1");
-		nob_cmd_append(cmd, "-s", "WASM=1");
-		nob_cmd_append(cmd, "-s", "TOTAL_MEMORY=67108864");
-		nob_cmd_append(cmd, "-s", "FORCE_FILESYSTEM=1");
-		nob_cmd_append(cmd, "--preload-file", RESOURCES_FOLDER);
-		nob_cmd_append(cmd, "--shell-file", "../minshell.html");
-	}
+	nob_cmd_optimize(cmd, current_config.optimize);
 }
 
 void link_platform(Nob_Cmd *cmd){
@@ -309,12 +313,16 @@ void link_platform(Nob_Cmd *cmd){
 enum RESULT get_source_files(Nob_Cmd *cmd){
 	enum RESULT result = SUCCESS;
 	Nob_Cmd main_obj_cmd = {0};
+	Nob_Cmd load_lib_obj_cmd = {0};
+	Nob_Cmd load_lib_cmd = {0};
 	size_t temp_checkpoint = nob_temp_save();
+
+	// TODO: cleanup
 	
-	// Main
+	// * MAIN - executable
 	bool force_rebuild = false;
 	bool is_shared = false;
-	// commands for each obj file compilation
+	// objs
 	nob_cc_flags(&main_obj_cmd);
 	get_defines(&main_obj_cmd);
 	get_include_raylib(&main_obj_cmd);
@@ -326,12 +334,44 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 		nob_return_defer(FAILED);
 	}
 
+/*
+	// * LOAD LIBRARY - static
+	// TODO: skip for non-desktop
+	// lib
+	nob_cmd_new_static_library(&load_lib_cmd, "load_library", LIB_FOLDER);
+	// objs
+	if (current_config.is_debug){
+		nob_cmd_debug(&load_lib_obj_cmd);
+	}
+	nob_cmd_optimize(&load_lib_obj_cmd, current_config.optimize);
+
+	nob_cc_flags(&load_lib_obj_cmd);
+	get_include_directories(&load_lib_obj_cmd);
+	if (nob_cmd_process_source_dir(&load_lib_cmd, &load_lib_obj_cmd, SOURCE_FOLDER "load_library/", OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+		nob_log(NOB_ERROR, "Failed building load_library.o");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+	if (!nob_cmd_run(&load_lib_cmd)){
+		nob_log(NOB_ERROR, "Failed building load_library.a");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+	// link with main
+	// TODO: handle MSVC linking
+	// nob_cmd_append(cmd, "-L" LIB_FOLDER);
+	// nob_cmd_append(cmd, "-l:libload_library.a");
+	// nob_cmd_append(cmd, "-lkernel32");
+*/
+	
+
 defer:
 	nob_temp_rewind(temp_checkpoint);
 	nob_cmd_free(main_obj_cmd);
+	nob_cmd_free(load_lib_obj_cmd);
+	nob_cmd_free(load_lib_cmd);
 	return result;
 }
-
 
 int main(int argc, char **argv){
 	NOB_GO_REBUILD_URSELF(argc, argv);
@@ -343,12 +383,13 @@ int main(int argc, char **argv){
 	nob_temp_rewind(temp_checkpoint);
 
 	// Set CWD to the project's root directory
-	get_directory_path(root_dir, sizeof(root_dir), argv[0]);
+	const char *program_path = nob_shift(argv, argc);
+	get_directory_path(root_dir, sizeof(root_dir), program_path);
 	if (!nob_set_current_dir(root_dir)){
 		nob_return_defer(FAILED);
 	}
 
-	const char *program_name = nob_shift(argv, argc);
+	// CLI
 	while (argc > 0){
 		const char *command_name = nob_shift(argv, argc);
 		if (strcmp(command_name, "-debug") == 0){
@@ -356,7 +397,7 @@ int main(int argc, char **argv){
 		}
 		else if (strcmp(command_name, "-name") == 0){
 			if (!(argc > 0)){
-				nob_log(NOB_ERROR, "No project name provided after `project`");
+				nob_log(NOB_ERROR, "No project name provided after `-name`");
 				assert(false);
 				nob_return_defer(FAILED);
 			}
@@ -364,7 +405,7 @@ int main(int argc, char **argv){
 		}
 		else if (strcmp(command_name, "-platform") == 0){
 			if (!(argc > 0)){
-				nob_log(NOB_ERROR, "No project name provided after `project`");
+				nob_log(NOB_ERROR, "No target platform provided after `-platform`");
 				assert(false);
 				nob_return_defer(FAILED);
 			}
@@ -373,19 +414,42 @@ int main(int argc, char **argv){
 				current_config.platform = PLATFORM_WEB;
 			}
 		}
+		else if (strcmp(command_name, "-optimize") == 0){
+			if (!(argc > 0)){
+				nob_log(NOB_ERROR, "No optimization option provided after `-optimize`");
+				assert(false);
+				nob_return_defer(FAILED);
+			}
+			const char *optimize = nob_shift(argv, argc);
+			if (strcmp(optimize, "debug") == 0){
+				current_config.optimize = OPTIMIZATION_DEBUG;
+			}
+			else if (strcmp(optimize, "release") == 0){
+				current_config.optimize = OPTIMIZATION_RELEASE;
+			}
+			else if (strcmp(optimize, "size") == 0){
+				current_config.optimize = OPTIMIZATION_SIZE;
+			}
+			else if (strcmp(optimize, "speed") == 0){
+				current_config.optimize = OPTIMIZATION_SPEED;
+			}
+			else if (strcmp(optimize, "aggressive") == 0){
+				current_config.optimize = OPTIMIZATION_AGGRESSIVE;
+				// NOTE: MSVC needs to link "/LTCG"
+			}
+		}
 	}
-
 
 	if (!nob_mkdir_if_not_exists(DOWNLOAD_FOLDER)) nob_return_defer(FAILED);
 	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER)) nob_return_defer(FAILED);
 	if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) nob_return_defer(FAILED);
 	if (!nob_mkdir_if_not_exists(OBJ_FOLDER)) nob_return_defer(FAILED);
+	if (!nob_mkdir_if_not_exists(LIB_FOLDER)) nob_return_defer(FAILED);
 
 	struct SavedConfig saved_config = {0};
 	if (load_binary(&saved_config, sizeof(saved_config), BUILD_FOLDER CONFIG_FILE_NAME, config_version) == 0){
 		previous_config = &saved_config;
 	}
-
 
 	if (current_config.platform == PLATFORM_WEB && setup_web(&cmd) == FAILED){
 		nob_log(NOB_ERROR, "Failed to setup web.");

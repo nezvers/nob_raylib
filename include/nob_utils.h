@@ -36,8 +36,18 @@ enum PLATFORM_TARGET {
 	PLATFORM_ANDROID,
 };
 
+enum OPTIMIZATION_OPTION {
+	OPTIMIZATION_NONE,        // -O0
+	OPTIMIZATION_DEBUG,       // -Og
+	OPTIMIZATION_RELEASE,     // -O3
+	OPTIMIZATION_SIZE,        // -Os
+	OPTIMIZATION_SPEED,       // -Ofast
+	OPTIMIZATION_AGGRESSIVE,  // -Oz
+};
+
 struct SavedConfig {
 	bool is_debug;
+	enum OPTIMIZATION_OPTION optimize;
 	enum PLATFORM_TARGET platform;
 	bool enable_wayland;
 };
@@ -149,6 +159,61 @@ void nob_cmd_make(Nob_Cmd *cmd){
 #endif
 }
 
+void nob_cmd_debug(Nob_Cmd *cmd){
+#if _MSC_VER
+	nob_cmd_append(cmd, "/Zi", "/MDd");
+#else
+	nob_cmd_append(cmd, "-g");
+#endif
+}
+
+void nob_cmd_optimize(Nob_Cmd *cmd, enum OPTIMIZATION_OPTION option){
+#if _MSC_VER
+	switch (option){
+		case OPTIMIZATION_NONE:
+			nob_cmd_append(cmd, "/Od");
+			break;
+		case OPTIMIZATION_DEBUG:
+			nob_cmd_append(cmd, "/Od", "/Ob0");  // Best for debugging: no inlining, no optimization
+			break;
+		case OPTIMIZATION_RELEASE:
+			nob_cmd_append(cmd, "/O2");  // Maximize speed — this is MSVC's standard release mode
+			break;
+		case OPTIMIZATION_SIZE:
+			nob_cmd_append(cmd, "/O1");  // Minimize size (MSVC's equivalent of -Os)
+			break;
+		case OPTIMIZATION_SPEED:
+			nob_cmd_append(cmd, "/O2", "/fp:fast");  // /O2 + fast floating-point model
+			break;
+		case OPTIMIZATION_AGGRESSIVE:
+			nob_cmd_append(cmd, "/O2", "/GL", "/fp:fast");  // Whole program optimization + fast FP
+			// TODO: /GL requires /LTCG at link time — your build system must add /LTCG when linking!
+			break;
+	}
+#else
+	switch (option){
+		case OPTIMIZATION_NONE:
+			nob_cmd_append(cmd, "-O0");
+			break;
+		case OPTIMIZATION_DEBUG:
+			nob_cmd_append(cmd, "-Og");
+			break;
+		case OPTIMIZATION_RELEASE:
+			nob_cmd_append(cmd, "-O3");
+			break;
+		case OPTIMIZATION_SIZE:
+			nob_cmd_append(cmd, "-Os");
+			break;
+		case OPTIMIZATION_SPEED:
+			nob_cmd_append(cmd, "-Ofast");
+			break;
+		case OPTIMIZATION_AGGRESSIVE:
+			nob_cmd_append(cmd, "-Ofast", "-march=native");
+			break;
+	}
+#endif
+}
+
 void nob_cmd_output_shared_object(Nob_Cmd *cmd, const char *src_path, const char *bin_path, bool debug){
 #if defined(_MSC_VER)
 	// TODO: add missing MSVC flags
@@ -184,25 +249,20 @@ void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *d
 	nob_temp_rewind(temp_checkpoint);
 }
 
-void nob_cmd_output_static_library(Nob_Cmd *cmd, const char *name, const char *directory, bool debug){
-	size_t temp_checkpoint = nob_temp_save();
-#if defined(WINDOWS)
-	#if defined(_MSC_VER)
-		// TODO: add missing MSVC flags
-		
-		nob_cmd_append(cmd, nob_temp_sprintf("/F%s", directory));
-		nob_cmd_append(cmd, nob_temp_sprintf("/Fe%slib%s.lib", directory, name));
-	#else
-		nob_cmd_append(cmd, "ar", "rcs");
-		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.a", directory, name));
-		if (debug) nob_cmd_append(cmd, "-g");
-	#endif
-#elif defined(LINUX)
+void nob_cmd_new_static_library(Nob_Cmd *cmd, const char *name, const char *directory){
+	// TODO: use dedicated buffer to hold output cstring (Nob_String_Builder?)
+	// size_t temp_checkpoint = nob_temp_save();
+#if defined(_MSC_VER)
+	// TODO: add correct MSVC flags
+	nob_cmd_append(cmd, "lib");
+	const char *output_file = nob_temp_sprintf("/OUT:%slib%s.lib", directory, name);
+	nob_cmd_append(cmd, output_file);
+#else
 	nob_cmd_append(cmd, "ar", "rcs");
-	nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.a", directory, name));
-	if (debug) nob_cmd_append(cmd, "-g");
+	const char *output_file = nob_temp_sprintf("%slib%s.a", directory, name);
+	nob_cmd_append(cmd, output_file);
 #endif
-	nob_temp_rewind(temp_checkpoint);
+	// nob_temp_rewind(temp_checkpoint);
 }
 
 void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source){
@@ -218,7 +278,7 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const ch
 	Nob_Procs procs = {0};
 	Nob_File_Paths file_list = {0};
 	int rebuild_is_needed;
-	size_t temp_checkpoint = nob_temp_save();
+	// size_t temp_checkpoint = nob_temp_save();
 
 	if (nob_fetch_files(source_dir, &file_list, src_extension) == FAILED){
 		assert(false);
@@ -244,8 +304,8 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const ch
 		nob_cc(&obj_cmd);
 		nob_cmd_append(&obj_cmd, "-c", src_file_path);
 		nob_cmd_append(&obj_cmd, "-o", bin_path);
-		if (shared) nob_cmd_append(cmd, "-fpic");
-		if (debug) nob_cmd_append(cmd, "-g");
+		if (shared) nob_cmd_append(&obj_cmd, "-fpic");
+		if (debug) nob_cmd_append(&obj_cmd, "-g");
 		nob_cmd_append_cmd(&obj_cmd, item_cmd);
 		if (!nob_cmd_run(&obj_cmd, .async = &procs)){
 			nob_log(NOB_ERROR, "Appending build to queue failed: %s%s%s -> %s%s%s", source_dir, src_name, src_extension, output_dir, src_name, src_extension);
@@ -263,7 +323,7 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const ch
 	}
 
 defer:
-	nob_temp_rewind(temp_checkpoint);
+	// nob_temp_rewind(temp_checkpoint);
 	nob_cmd_free(obj_cmd);
 	nob_da_free(procs);
 	nob_da_free(file_list);
@@ -299,11 +359,12 @@ defer:
 
 enum RESULT load_binary(void *buffer, size_t size, const char *file_path, int bin_version){
 	enum RESULT result = SUCCESS;
+	FILE *file = NULL;
 	if (!nob_file_exists(file_path)){
 		nob_log(NOB_INFO, "File to load doesn't exist: %s", file_path);
 		nob_return_defer(FAILED);
 	}
-	FILE *file = fopen(file_path, "rb");
+	file = fopen(file_path, "rb");
     if (!file) {
         nob_log(NOB_ERROR, "Open file to load: %s ", file_path);
 		assert(false);
