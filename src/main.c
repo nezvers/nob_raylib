@@ -1,5 +1,6 @@
 #include "raylib.h" // www.raylib.com
-#include "adjust.h" // learn about features -> https://github.com/bi3mer/adjust.h 
+#include "adjust.h" // learn about features -> https://github.com/bi3mer/adjust.h
+#include "load_library.h"
 
 int main(void)
 {

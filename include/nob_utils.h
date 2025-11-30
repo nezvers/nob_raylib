@@ -151,6 +151,14 @@ char *nob_temp_cstr_from_string_view(Nob_String_View *sv){
 	return result;
 }
 
+// Store cstring persistently and get pointer to stored cstr
+const char *nob_sb_store_cstr(Nob_String_Builder *sb, const char *cstr){
+	int start_i = sb->count;
+	nob_sb_append_cstr(sb, cstr);
+	nob_sb_append_null(sb);
+	return &sb->items[start_i];
+}
+
 void nob_cmd_make(Nob_Cmd *cmd){
 #if defined(__MINGW32__)
 	nob_cmd_append(cmd, "mingw32-make");
@@ -227,24 +235,22 @@ void nob_cmd_output_shared_object(Nob_Cmd *cmd, const char *src_path, const char
 
 void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *directory, bool debug){
 	size_t temp_checkpoint = nob_temp_save();
-#if defined(WINDOWS)
-	#if defined(_MSC_VER)
-		// TODO: add missing MSVC flags
-		if (debug) nob_cmd_append(cmd, "/LDd");
-		else nob_cmd_append(cmd, "/LD");
+#if defined(_MSC_VER)
+	// TODO: add missing MSVC flags
+	if (debug) nob_cmd_append(cmd, "/LDd");
+	else nob_cmd_append(cmd, "/LD");
 
-		nob_cmd_append(cmd, nob_temp_sprintf("/F%s", directory));
-		nob_cmd_append(cmd, nob_temp_sprintf("/Fe%slib%s.dll", directory, name));
-	#else
-		if (debug) nob_cmd_append(cmd, "-g");
-		nob_cmd_append(cmd, "-shared", "-o");
-		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.dll", directory, name));
-		nob_cmd_append(cmd, "-Wl", "--out-implib");
-	#endif
-#elif defined(LINUX)
+	nob_cmd_append(cmd, nob_temp_sprintf("/F%s", directory));
+	nob_cmd_append(cmd, nob_temp_sprintf("/Fe%slib%s.dll", directory, name));
+#else
 	if (debug) nob_cmd_append(cmd, "-g");
 	nob_cmd_append(cmd, "-shared", "-o");
-	nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.so", directory, name));
+	#if defined(WINDOWS)
+		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.dll", directory, name));
+		nob_cmd_append(cmd, "-Wl", "--out-implib");
+	#elif defined(LINUX)
+		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.so", directory, name));
+	#endif
 #endif
 	nob_temp_rewind(temp_checkpoint);
 }
@@ -272,7 +278,7 @@ void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source){
 	}
 }
 
-enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const char *source_dir, const char *output_dir, const char *src_extension, bool debug, bool shared, bool force_rebuild){
+enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, Nob_String_Builder *sb, const char *source_dir, const char *output_dir, const char *src_extension, bool debug, bool shared, bool force_rebuild){
 	enum RESULT result = SUCCESS;
 	Nob_Cmd obj_cmd = {0};
 	Nob_Procs procs = {0};
@@ -291,12 +297,16 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, const ch
 	Nob_String_View src_file;
 	size_t temp_obj_checkpoint;
 	for (int i = 0; i < file_list.count; ++i){
-		// TODO: handle temp memory with many source files
 		// TODO: Add MSVC flags
 		src_file = get_file_name_no_extension(file_list.items[i]);
 		src_name = nob_temp_cstr_from_string_view(&src_file);
 		src_file_path = nob_temp_sprintf("%s%s%s", source_dir, src_name, src_extension);
-		bin_path = nob_temp_sprintf("%s%s.o", output_dir, src_name); // <- Gets stored for library. Probably need dedicated buffer for each library
+		bin_path = nob_sb_store_cstr(sb, nob_temp_sprintf("%s%s.o", output_dir, src_name));
+		if (bin_path == NULL){
+			nob_log(NOB_ERROR, "Failed to allocate binary file path cstr: %s", nob_temp_sprintf("%s%s.o", output_dir, src_name));
+			assert(false);
+			nob_return_defer(FAILED);
+		}
 		rebuild_is_needed = nob_needs_rebuild1(bin_path, src_file_path);
 		if (rebuild_is_needed < 0) nob_return_defer(FAILED);
 		if (rebuild_is_needed == 0 && !force_rebuild) continue;

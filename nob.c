@@ -303,14 +303,19 @@ void get_defines(Nob_Cmd *cmd){
 }
 
 void link_platform(Nob_Cmd *cmd){
+	if (current_config.platform == PLATFORM_WEB){
+
+	}
+	else{
 #if defined(WINDOWS)
 	nob_cmd_append(cmd, "-lwinmm", "-lgdi32", "-lole32");
 #elif defined(LINUX)
 	nob_cmd_append(cmd, "-lm", "-ldl", "-flto=auto", "-lpthread");
 #endif
+	}
 }
 
-enum RESULT get_source_files(Nob_Cmd *cmd){
+enum RESULT get_source_files(Nob_Cmd *cmd, Nob_String_Builder *sb){
 	enum RESULT result = SUCCESS;
 	Nob_Cmd main_obj_cmd = {0};
 	Nob_Cmd load_lib_obj_cmd = {0};
@@ -328,13 +333,12 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 	get_include_raylib(&main_obj_cmd);
 	get_include_directories(&main_obj_cmd);
 
-	if (nob_cmd_process_source_dir(cmd, &main_obj_cmd, SOURCE_FOLDER, OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	if (nob_cmd_process_source_dir(cmd, &main_obj_cmd, sb, SOURCE_FOLDER, OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building main.o");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
 
-/*
 	// * LOAD LIBRARY - static
 	// TODO: skip for non-desktop
 	// lib
@@ -347,7 +351,7 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 
 	nob_cc_flags(&load_lib_obj_cmd);
 	get_include_directories(&load_lib_obj_cmd);
-	if (nob_cmd_process_source_dir(&load_lib_cmd, &load_lib_obj_cmd, SOURCE_FOLDER "load_library/", OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	if (nob_cmd_process_source_dir(&load_lib_cmd, &load_lib_obj_cmd, sb, SOURCE_FOLDER "load_library/", OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building load_library.o");
 		assert(false);
 		nob_return_defer(FAILED);
@@ -359,10 +363,9 @@ enum RESULT get_source_files(Nob_Cmd *cmd){
 	}
 	// link with main
 	// TODO: handle MSVC linking
-	// nob_cmd_append(cmd, "-L" LIB_FOLDER);
-	// nob_cmd_append(cmd, "-l:libload_library.a");
-	// nob_cmd_append(cmd, "-lkernel32");
-*/
+	nob_cmd_append(cmd, "-L" LIB_FOLDER);
+	nob_cmd_append(cmd, "-l:libload_library.a");
+	nob_cmd_append(cmd, "-lkernel32");
 	
 
 defer:
@@ -377,6 +380,7 @@ int main(int argc, char **argv){
 	NOB_GO_REBUILD_URSELF(argc, argv);
 	enum RESULT result = SUCCESS;
 	Nob_Cmd cmd = {0};
+	Nob_String_Builder sb = {0};
 	size_t temp_checkpoint = nob_temp_save();
 	char root_dir[1024] = {0};
 	snprintf(starting_cwd, sizeof(starting_cwd), "%s", nob_get_current_dir_temp());
@@ -473,7 +477,7 @@ int main(int argc, char **argv){
 		// Place in root folder, next to resources folder
 		nob_cc_output(&cmd, project_name);
 	}
-	if (get_source_files(&cmd)){
+	if (get_source_files(&cmd, &sb)){
 		nob_log(NOB_ERROR, "Failed to get source files");
 		assert(false);
 		nob_return_defer(FAILED);
@@ -495,6 +499,6 @@ int main(int argc, char **argv){
 defer:
 	nob_set_current_dir(starting_cwd);
 	nob_cmd_free(cmd);
-	
+	nob_sb_free(sb);
 	return result;
 }
