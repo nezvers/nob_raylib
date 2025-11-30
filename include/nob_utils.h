@@ -255,20 +255,20 @@ void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *d
 	nob_temp_rewind(temp_checkpoint);
 }
 
-void nob_cmd_new_static_library(Nob_Cmd *cmd, const char *name, const char *directory){
+void nob_cmd_new_static_library(Nob_Cmd *cmd, Nob_String_Builder *sb, const char *name, const char *directory){
 	// TODO: use dedicated buffer to hold output cstring (Nob_String_Builder?)
-	// size_t temp_checkpoint = nob_temp_save();
+	size_t temp_checkpoint = nob_temp_save();
 #if defined(_MSC_VER)
 	// TODO: add correct MSVC flags
 	nob_cmd_append(cmd, "lib");
-	const char *output_file = nob_temp_sprintf("/OUT:%slib%s.lib", directory, name);
+	const char *output_file = nob_sb_store_cstr(sb, nob_temp_sprintf("/OUT:%slib%s.lib", directory, name));
 	nob_cmd_append(cmd, output_file);
 #else
 	nob_cmd_append(cmd, "ar", "rcs");
-	const char *output_file = nob_temp_sprintf("%slib%s.a", directory, name);
+	const char *output_file = nob_sb_store_cstr(sb, nob_temp_sprintf("%slib%s.a", directory, name));
 	nob_cmd_append(cmd, output_file);
 #endif
-	// nob_temp_rewind(temp_checkpoint);
+	nob_temp_rewind(temp_checkpoint);
 }
 
 void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source){
@@ -283,8 +283,9 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, Nob_Stri
 	Nob_Cmd obj_cmd = {0};
 	Nob_Procs procs = {0};
 	Nob_File_Paths file_list = {0};
+	Nob_String_Builder obj_sb = {0};
 	int rebuild_is_needed;
-	// size_t temp_checkpoint = nob_temp_save();
+	size_t temp_checkpoint = nob_temp_save();
 
 	if (nob_fetch_files(source_dir, &file_list, src_extension) == FAILED){
 		assert(false);
@@ -295,12 +296,11 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, Nob_Stri
 	const char *src_file_path;
 	const char *bin_path;
 	Nob_String_View src_file;
-	size_t temp_obj_checkpoint;
 	for (int i = 0; i < file_list.count; ++i){
-		// TODO: Add MSVC flags
 		src_file = get_file_name_no_extension(file_list.items[i]);
 		src_name = nob_temp_cstr_from_string_view(&src_file);
-		src_file_path = nob_temp_sprintf("%s%s%s", source_dir, src_name, src_extension);
+		src_file_path = nob_sb_store_cstr(&obj_sb, nob_temp_sprintf("%s%s%s", source_dir, src_name, src_extension));
+		// TODO: Add MSVC obj
 		bin_path = nob_sb_store_cstr(sb, nob_temp_sprintf("%s%s.o", output_dir, src_name));
 		if (bin_path == NULL){
 			nob_log(NOB_ERROR, "Failed to allocate binary file path cstr: %s", nob_temp_sprintf("%s%s.o", output_dir, src_name));
@@ -312,6 +312,7 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, Nob_Stri
 		if (rebuild_is_needed == 0 && !force_rebuild) continue;
 		
 		nob_cc(&obj_cmd);
+		// TODO: Add MSVC flags
 		nob_cmd_append(&obj_cmd, "-c", src_file_path);
 		nob_cmd_append(&obj_cmd, "-o", bin_path);
 		if (shared) nob_cmd_append(&obj_cmd, "-fpic");
@@ -322,7 +323,8 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, Nob_Stri
 			assert(false);
 			nob_return_defer(FAILED);
 		}
-		nob_cc_inputs(cmd, bin_path); // <- Potentially used after free
+		nob_cc_inputs(cmd, bin_path);
+		nob_temp_rewind(temp_checkpoint);
 	}
 
 	// Wait on all the async processes to finish and reset procs dynamic array to 0
@@ -333,8 +335,9 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, Nob_Stri
 	}
 
 defer:
-	// nob_temp_rewind(temp_checkpoint);
+	nob_temp_rewind(temp_checkpoint);
 	nob_cmd_free(obj_cmd);
+	nob_sb_free(obj_sb);
 	nob_da_free(procs);
 	nob_da_free(file_list);
 	return result;

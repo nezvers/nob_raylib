@@ -332,17 +332,19 @@ enum RESULT get_source_files(Nob_Cmd *cmd, Nob_String_Builder *sb){
 	get_defines(&main_obj_cmd);
 	get_include_raylib(&main_obj_cmd);
 	get_include_directories(&main_obj_cmd);
+	nob_cmd_optimize(&main_obj_cmd, current_config.optimize);
 
 	if (nob_cmd_process_source_dir(cmd, &main_obj_cmd, sb, SOURCE_FOLDER, OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building main.o");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
+	nob_temp_rewind(temp_checkpoint);
 
 	// * LOAD LIBRARY - static
 	// TODO: skip for non-desktop
 	// lib
-	nob_cmd_new_static_library(&load_lib_cmd, "load_library", LIB_FOLDER);
+	nob_cmd_new_static_library(&load_lib_cmd, sb, "load_library", LIB_FOLDER);
 	// objs
 	if (current_config.is_debug){
 		nob_cmd_debug(&load_lib_obj_cmd);
@@ -361,6 +363,7 @@ enum RESULT get_source_files(Nob_Cmd *cmd, Nob_String_Builder *sb){
 		assert(false);
 		nob_return_defer(FAILED);
 	}
+	nob_temp_rewind(temp_checkpoint);
 	// link with main
 	// TODO: handle MSVC linking
 	nob_cmd_append(cmd, "-L" LIB_FOLDER);
