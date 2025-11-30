@@ -175,6 +175,25 @@ void nob_cmd_debug(Nob_Cmd *cmd){
 #endif
 }
 
+void nob_cmd_link_lib(Nob_Cmd *cmd, Nob_String_Builder *sb, const char *dir_path, const char *lib_name){
+	// TODO: make it usable for general use. MSVC use Capital first letter for windows libs
+	size_t temp_checkpoint = nob_temp_save();
+#if _MSC_VER
+	char path_buf[1024] = {0};
+	snprintf(path_buf, sizeof(path_buf), "%s", dir_path);
+	swap_dir_slashes(path_buf, sizeof(path_buf));
+	const char *lib_path = nob_sb_store_cstr(sb, nob_temp_sprintf("%s%s.lib", dir_path, lib_name));
+	nob_cmd_append(cmd, lib_path);
+#else
+	if (dir_path != NULL){
+		nob_cmd_append(cmd, "-L", dir_path);
+	}
+	const char *lib_path = nob_sb_store_cstr(sb, nob_temp_sprintf("-l:lib%s.a", lib_name));
+	nob_cmd_append(cmd, lib_path);
+#endif
+	nob_temp_rewind(temp_checkpoint);
+}
+
 void nob_cmd_optimize(Nob_Cmd *cmd, enum OPTIMIZATION_OPTION option){
 #if _MSC_VER
 	switch (option){
@@ -255,17 +274,20 @@ void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *d
 	nob_temp_rewind(temp_checkpoint);
 }
 
-void nob_cmd_new_static_library(Nob_Cmd *cmd, Nob_String_Builder *sb, const char *name, const char *directory){
+void nob_cmd_new_static_library(Nob_Cmd *cmd, Nob_String_Builder *sb, const char *name, const char *dir_path){
 	// TODO: use dedicated buffer to hold output cstring (Nob_String_Builder?)
 	size_t temp_checkpoint = nob_temp_save();
 #if defined(_MSC_VER)
 	// TODO: add correct MSVC flags
 	nob_cmd_append(cmd, "lib");
-	const char *output_file = nob_sb_store_cstr(sb, nob_temp_sprintf("/OUT:%slib%s.lib", directory, name));
+	char path_buf[1024] = {0};
+	snprintf(path_buf, sizeof(path_buf), "%s", dir_path);
+	swap_dir_slashes(path_buf, sizeof(path_buf));
+	const char *output_file = nob_sb_store_cstr(sb, nob_temp_sprintf("/OUT:%s%s.lib", path_buf, name));
 	nob_cmd_append(cmd, output_file);
 #else
 	nob_cmd_append(cmd, "ar", "rcs");
-	const char *output_file = nob_sb_store_cstr(sb, nob_temp_sprintf("%slib%s.a", directory, name));
+	const char *output_file = nob_sb_store_cstr(sb, nob_temp_sprintf("%slib%s.a", dir_path, name));
 	nob_cmd_append(cmd, output_file);
 #endif
 	nob_temp_rewind(temp_checkpoint);

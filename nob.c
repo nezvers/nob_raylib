@@ -365,10 +365,17 @@ enum RESULT get_source_files(Nob_Cmd *cmd, Nob_String_Builder *sb){
 	}
 	nob_temp_rewind(temp_checkpoint);
 	// link with main
-	// TODO: handle MSVC linking
-	nob_cmd_append(cmd, "-L" LIB_FOLDER);
-	nob_cmd_append(cmd, "-l:libload_library.a");
-	nob_cmd_append(cmd, "-lkernel32");
+	// TODO: abstract kernel32 & dl
+	nob_cmd_link_lib(cmd, sb, LIB_FOLDER, "load_library");
+#if _MSC_VER
+	nob_cmd_append(cmd, "Kernel32.lib");
+#else
+	#if defined(WINDOWS)
+		nob_cmd_append(cmd, "-lkernel32");
+	#else
+		nob_cmd_append(cmd, "-ldl");
+	#endif
+#endif
 	
 
 defer:
