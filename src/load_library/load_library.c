@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #ifdef _WIN32
-#    define _WIN32_WINNT 0x0501 // win XP - https://learn.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt?view=msvc-170
+// #    define _WIN32_WINNT 0x0501 // win XP - https://learn.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt?view=msvc-170
 #    include <windows.h> // requires linking: Kernel32.lib / Kernel32.dll
 #    include <winerror.h>
 #else

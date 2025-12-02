@@ -61,8 +61,9 @@ const char *get_raylib_platform(enum PLATFORM_TARGET platform){
 	}
 }
 
-enum RESULT setup_raylib(Nob_Cmd *cmd){
+enum RESULT setup_raylib(){
 	enum RESULT result = SUCCESS;
+	Nob_Cmd raylib_cmd = {0};
 	size_t temp_checkpoint = nob_temp_save();
 	const char *raylib_url = "https://github.com/raysan5/raylib/archive/refs/tags/" RAYLIB_TAG ".tar.gz";
 
@@ -98,11 +99,11 @@ enum RESULT setup_raylib(Nob_Cmd *cmd){
 			nob_return_defer(FAILED);
 		}
 
-		nob_cmd_make(cmd);
+		nob_cmd_make(&raylib_cmd);
 		const char *raylib_platform = get_raylib_platform(current_config.platform);
-		nob_cmd_append(cmd, raylib_platform);
+		nob_cmd_append(&raylib_cmd, raylib_platform);
 		// defer failure after redurning current working directory
-		bool compile_success = nob_cmd_run(cmd);
+		bool compile_success = nob_cmd_run(&raylib_cmd);
 
 		nob_log(NOB_INFO, "Changing directory: %s ", "../../../");
 		if (!nob_set_current_dir("../../../")){
@@ -164,7 +165,7 @@ void link_raylib(Nob_Cmd *cmd){
 }
 //---------------------------------------------------------------------------------
 // Emscripten
-enum RESULT setup_emscripten(Nob_Cmd *cmd){
+enum RESULT setup_emscripten(){
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
 	const char *emscripten_git = "https://github.com/emscripten-core/emsdk.git";
@@ -240,9 +241,9 @@ defer:
 	return result;
 }
 
-enum RESULT setup_web(Nob_Cmd *cmd){
+enum RESULT setup_web(){
 	enum RESULT result = SUCCESS;
-	if (setup_emscripten(cmd) == FAILED) nob_return_defer(FAILED);
+	if (setup_emscripten() == FAILED) nob_return_defer(FAILED);
 
 	if (!nob_mkdir_if_not_exists(WEB_FOLDER)) nob_return_defer(FAILED);
 	if (nob_file_exists(WEB_FOLDER RESOURCES_FOLDER)){
@@ -315,18 +316,22 @@ void link_platform(Nob_Cmd *cmd){
 	}
 }
 
-enum RESULT get_source_files(Nob_Cmd *cmd, Nob_String_Builder *sb){
+enum RESULT compile_project(){
 	enum RESULT result = SUCCESS;
 	Nob_Cmd main_obj_cmd = {0};
 	Nob_Cmd load_lib_obj_cmd = {0};
+	Nob_String_Builder sb = {0};
 	Nob_Cmd load_lib_cmd = {0};
 	size_t temp_checkpoint = nob_temp_save();
+	Nob_Cmd main_cmd = {0};
 
 	// TODO: cleanup
 	
 	// * MAIN - executable
 	bool force_rebuild = false;
 	bool is_shared = false;
+	nob_cc(&main_cmd);
+
 	// objs
 	nob_cc_flags(&main_obj_cmd);
 	get_defines(&main_obj_cmd);
@@ -334,7 +339,7 @@ enum RESULT get_source_files(Nob_Cmd *cmd, Nob_String_Builder *sb){
 	get_include_directories(&main_obj_cmd);
 	nob_cmd_optimize(&main_obj_cmd, current_config.optimize);
 
-	if (nob_cmd_process_source_dir(cmd, &main_obj_cmd, sb, SOURCE_FOLDER, OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	if (nob_cmd_process_source_dir(&main_cmd, &main_obj_cmd, &sb, SOURCE_FOLDER, OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building main.o");
 		assert(false);
 		nob_return_defer(FAILED);
@@ -344,7 +349,7 @@ enum RESULT get_source_files(Nob_Cmd *cmd, Nob_String_Builder *sb){
 	// * LOAD LIBRARY - static
 	// TODO: skip for non-desktop
 	// lib
-	nob_cmd_new_static_library(&load_lib_cmd, sb, "load_library", LIB_FOLDER);
+	nob_cmd_new_static_library(&load_lib_cmd, &sb, "load_library", LIB_FOLDER);
 	// objs
 	if (current_config.is_debug){
 		nob_cmd_debug(&load_lib_obj_cmd);
@@ -353,7 +358,7 @@ enum RESULT get_source_files(Nob_Cmd *cmd, Nob_String_Builder *sb){
 
 	nob_cc_flags(&load_lib_obj_cmd);
 	get_include_directories(&load_lib_obj_cmd);
-	if (nob_cmd_process_source_dir(&load_lib_cmd, &load_lib_obj_cmd, sb, SOURCE_FOLDER "load_library/", OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	if (nob_cmd_process_source_dir(&load_lib_cmd, &load_lib_obj_cmd, &sb, SOURCE_FOLDER "load_library/", OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building load_library.o");
 		assert(false);
 		nob_return_defer(FAILED);
@@ -366,31 +371,46 @@ enum RESULT get_source_files(Nob_Cmd *cmd, Nob_String_Builder *sb){
 	nob_temp_rewind(temp_checkpoint);
 	// link with main
 	// TODO: abstract kernel32 & dl
-	nob_cmd_link_lib(cmd, sb, LIB_FOLDER, "load_library");
+	nob_cmd_link_lib(&main_cmd, &sb, LIB_FOLDER, "load_library");
 #if _MSC_VER
-	nob_cmd_append(cmd, "Kernel32.lib");
+	nob_cmd_append(&main_cmd, "Kernel32.lib");
 #else
 	#if defined(WINDOWS)
-		nob_cmd_append(cmd, "-lkernel32");
+		nob_cmd_append(&main_cmd, "-lkernel32");
 	#else
-		nob_cmd_append(cmd, "-ldl");
+		nob_cmd_append(&main_cmd, "-ldl");
 	#endif
 #endif
+
+	if (current_config.is_debug){
+		// Place inside build folder
+		nob_cc_output(&main_cmd, nob_temp_sprintf("%s%s", BUILD_FOLDER, project_name));
+	}
+	else{
+		// Place in root folder, next to resources folder
+		nob_cc_output(&main_cmd, project_name);
+	}
+	link_raylib(&main_cmd);
 	
+	if (!nob_cmd_run(&main_cmd)){
+		nob_log(NOB_ERROR, "Failed to compile app");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
 
 defer:
 	nob_temp_rewind(temp_checkpoint);
 	nob_cmd_free(main_obj_cmd);
+	nob_cmd_free(main_cmd);
 	nob_cmd_free(load_lib_obj_cmd);
 	nob_cmd_free(load_lib_cmd);
+	nob_sb_free(sb);
 	return result;
 }
 
 int main(int argc, char **argv){
 	NOB_GO_REBUILD_URSELF(argc, argv);
 	enum RESULT result = SUCCESS;
-	Nob_Cmd cmd = {0};
-	Nob_String_Builder sb = {0};
 	size_t temp_checkpoint = nob_temp_save();
 	char root_dir[1024] = {0};
 	snprintf(starting_cwd, sizeof(starting_cwd), "%s", nob_get_current_dir_temp());
@@ -465,37 +485,21 @@ int main(int argc, char **argv){
 		previous_config = &saved_config;
 	}
 
-	if (current_config.platform == PLATFORM_WEB && setup_web(&cmd) == FAILED){
+	if (current_config.platform == PLATFORM_WEB && setup_web() == FAILED){
 		nob_log(NOB_ERROR, "Failed to setup web.");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
 
-	if (setup_raylib(&cmd) == FAILED){
+	if (setup_raylib() == FAILED){
 		nob_log(NOB_ERROR, "Failed to setup RAYLIB.");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
 
 	// Compile project
-	nob_cc(&cmd);
-	if (current_config.is_debug){
-		// Place inside build folder
-		nob_cc_output(&cmd, nob_temp_sprintf("%s%s", BUILD_FOLDER, project_name));
-	}
-	else{
-		// Place in root folder, next to resources folder
-		nob_cc_output(&cmd, project_name);
-	}
-	if (get_source_files(&cmd, &sb)){
+	if (compile_project()){
 		nob_log(NOB_ERROR, "Failed to get source files");
-		assert(false);
-		nob_return_defer(FAILED);
-	}
-	link_raylib(&cmd);
-
-	if (!nob_cmd_run(&cmd)){
-		nob_log(NOB_ERROR, "Failed to compile app");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
@@ -508,7 +512,5 @@ int main(int argc, char **argv){
 
 defer:
 	nob_set_current_dir(starting_cwd);
-	nob_cmd_free(cmd);
-	nob_sb_free(sb);
 	return result;
 }
