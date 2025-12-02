@@ -296,14 +296,27 @@ void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source){
 	}
 }
 
+enum RESULT nob_cmd_input_objects_dir(Nob_Cmd *cmd, const char *obj_dir, Nob_File_Paths *file_list){
+	enum RESULT result = SUCCESS;
+	if (nob_fetch_files(obj_dir, file_list, ".o") == FAILED){
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+	for (int i = 0; i < file_list->count; ++i){
+		nob_cc_inputs(cmd, file_list->items[i]);
+	}
+defer:
+	return result;
+}
+
 enum RESULT nob_cmd_process_source_dir(Nob_Cmd *item_cmd, const char *source_dir, const char *output_dir, const char *src_extension, bool debug, bool shared, bool force_rebuild){
 	enum RESULT result = SUCCESS;
 	Nob_Cmd obj_cmd = {0};
 	Nob_Procs procs = {0};
 	Nob_File_Paths file_list = {0};
-	Nob_String_Builder obj_sb = {0};
 	int rebuild_is_needed;
 	size_t temp_checkpoint = nob_temp_save();
+	if (!nob_mkdir_if_not_exists(output_dir)) nob_return_defer(FAILED);
 
 	if (nob_fetch_files(source_dir, &file_list, src_extension) == FAILED){
 		assert(false);
@@ -354,7 +367,6 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *item_cmd, const char *source_dir
 defer:
 	nob_temp_rewind(temp_checkpoint);
 	nob_cmd_free(obj_cmd);
-	nob_sb_free(obj_sb);
 	nob_da_free(procs);
 	nob_da_free(file_list);
 	return result;

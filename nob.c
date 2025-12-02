@@ -338,13 +338,13 @@ enum RESULT compile_project(){
 	get_include_directories(&main_obj_cmd);
 	nob_cmd_optimize(&main_obj_cmd, current_config.optimize);
 
-	if (nob_cmd_process_source_dir(&main_obj_cmd, SOURCE_FOLDER, OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	if (nob_cmd_process_source_dir(&main_obj_cmd, SOURCE_FOLDER, OBJ_FOLDER "main/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building main.o");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
 	// TODO: fetch object files
-	nob_cc_inputs(&main_cmd, OBJ_FOLDER "main.o");
+	nob_cc_inputs(&main_cmd, OBJ_FOLDER  "main/main.o");
 	nob_temp_rewind(temp_checkpoint);
 
 	// * LOAD LIBRARY - static
@@ -359,13 +359,13 @@ enum RESULT compile_project(){
 
 	nob_cc_flags(&load_lib_obj_cmd);
 	get_include_directories(&load_lib_obj_cmd);
-	if (nob_cmd_process_source_dir(&load_lib_obj_cmd, SOURCE_FOLDER "load_library/", OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	if (nob_cmd_process_source_dir(&load_lib_obj_cmd, SOURCE_FOLDER "load_library/", OBJ_FOLDER "load_library/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building load_library.o");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
 	// TODO: fetch object files
-	nob_cc_inputs(&load_lib_cmd, OBJ_FOLDER "load_library.o");
+	nob_cc_inputs(&load_lib_cmd, OBJ_FOLDER "load_library/load_library.o");
 	if (!nob_cmd_run(&load_lib_cmd)){
 		nob_log(NOB_ERROR, "Failed building load_library.a");
 		assert(false);
