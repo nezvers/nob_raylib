@@ -320,7 +320,6 @@ enum RESULT compile_project(){
 	enum RESULT result = SUCCESS;
 	Nob_Cmd main_obj_cmd = {0};
 	Nob_Cmd load_lib_obj_cmd = {0};
-	Nob_String_Builder sb = {0};
 	Nob_Cmd load_lib_cmd = {0};
 	size_t temp_checkpoint = nob_temp_save();
 	Nob_Cmd main_cmd = {0};
@@ -339,17 +338,19 @@ enum RESULT compile_project(){
 	get_include_directories(&main_obj_cmd);
 	nob_cmd_optimize(&main_obj_cmd, current_config.optimize);
 
-	if (nob_cmd_process_source_dir(&main_cmd, &main_obj_cmd, &sb, SOURCE_FOLDER, OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	if (nob_cmd_process_source_dir(&main_obj_cmd, SOURCE_FOLDER, OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building main.o");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
+	// TODO: fetch object files
+	nob_cc_inputs(&main_cmd, OBJ_FOLDER "main.o");
 	nob_temp_rewind(temp_checkpoint);
 
 	// * LOAD LIBRARY - static
 	// TODO: skip for non-desktop
 	// lib
-	nob_cmd_new_static_library(&load_lib_cmd, &sb, "load_library", LIB_FOLDER);
+	nob_cmd_new_static_library(&load_lib_cmd, "load_library", LIB_FOLDER);
 	// objs
 	if (current_config.is_debug){
 		nob_cmd_debug(&load_lib_obj_cmd);
@@ -358,11 +359,13 @@ enum RESULT compile_project(){
 
 	nob_cc_flags(&load_lib_obj_cmd);
 	get_include_directories(&load_lib_obj_cmd);
-	if (nob_cmd_process_source_dir(&load_lib_cmd, &load_lib_obj_cmd, &sb, SOURCE_FOLDER "load_library/", OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	if (nob_cmd_process_source_dir(&load_lib_obj_cmd, SOURCE_FOLDER "load_library/", OBJ_FOLDER, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building load_library.o");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
+	// TODO: fetch object files
+	nob_cc_inputs(&load_lib_cmd, OBJ_FOLDER "load_library.o");
 	if (!nob_cmd_run(&load_lib_cmd)){
 		nob_log(NOB_ERROR, "Failed building load_library.a");
 		assert(false);
@@ -371,7 +374,7 @@ enum RESULT compile_project(){
 	nob_temp_rewind(temp_checkpoint);
 	// link with main
 	// TODO: abstract kernel32 & dl
-	nob_cmd_link_lib(&main_cmd, &sb, LIB_FOLDER, "load_library");
+	nob_cmd_link_lib(&main_cmd, LIB_FOLDER, "load_library");
 #if _MSC_VER
 	nob_cmd_append(&main_cmd, "Kernel32.lib");
 #else
@@ -404,7 +407,6 @@ defer:
 	nob_cmd_free(main_cmd);
 	nob_cmd_free(load_lib_obj_cmd);
 	nob_cmd_free(load_lib_cmd);
-	nob_sb_free(sb);
 	return result;
 }
 

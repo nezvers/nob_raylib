@@ -175,23 +175,21 @@ void nob_cmd_debug(Nob_Cmd *cmd){
 #endif
 }
 
-void nob_cmd_link_lib(Nob_Cmd *cmd, Nob_String_Builder *sb, const char *dir_path, const char *lib_name){
+void nob_cmd_link_lib(Nob_Cmd *cmd, const char *dir_path, const char *lib_name){
 	// TODO: make it usable for general use. MSVC use Capital first letter for windows libs
-	size_t temp_checkpoint = nob_temp_save();
 #if _MSC_VER
 	char path_buf[1024] = {0};
 	snprintf(path_buf, sizeof(path_buf), "%s", dir_path);
 	swap_dir_slashes(path_buf, sizeof(path_buf));
-	const char *lib_path = nob_sb_store_cstr(sb, nob_temp_sprintf("%s%s.lib", dir_path, lib_name));
+	const char *lib_path = nob_temp_sprintf("%s%s.lib", dir_path, lib_name);
 	nob_cmd_append(cmd, lib_path);
 #else
 	if (dir_path != NULL){
 		nob_cmd_append(cmd, "-L", dir_path);
 	}
-	const char *lib_path = nob_sb_store_cstr(sb, nob_temp_sprintf("-l:lib%s.a", lib_name));
+	const char *lib_path = nob_temp_sprintf("-l:lib%s.a", lib_name);
 	nob_cmd_append(cmd, lib_path);
 #endif
-	nob_temp_rewind(temp_checkpoint);
 }
 
 void nob_cmd_optimize(Nob_Cmd *cmd, enum OPTIMIZATION_OPTION option){
@@ -274,23 +272,21 @@ void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *d
 	nob_temp_rewind(temp_checkpoint);
 }
 
-void nob_cmd_new_static_library(Nob_Cmd *cmd, Nob_String_Builder *sb, const char *name, const char *dir_path){
+void nob_cmd_new_static_library(Nob_Cmd *cmd, const char *name, const char *dir_path){
 	// TODO: use dedicated buffer to hold output cstring (Nob_String_Builder?)
-	size_t temp_checkpoint = nob_temp_save();
 #if defined(_MSC_VER)
 	// TODO: add correct MSVC flags
 	nob_cmd_append(cmd, "lib");
 	char path_buf[1024] = {0};
 	snprintf(path_buf, sizeof(path_buf), "%s", dir_path);
 	swap_dir_slashes(path_buf, sizeof(path_buf));
-	const char *output_file = nob_sb_store_cstr(sb, nob_temp_sprintf("/OUT:%s%s.lib", path_buf, name));
+	const char *output_file = nob_temp_sprintf("/OUT:%s%s.lib", path_buf, name);
 	nob_cmd_append(cmd, output_file);
 #else
 	nob_cmd_append(cmd, "ar", "rcs");
-	const char *output_file = nob_sb_store_cstr(sb, nob_temp_sprintf("%slib%s.a", dir_path, name));
+	const char *output_file = nob_temp_sprintf("%slib%s.a", dir_path, name);
 	nob_cmd_append(cmd, output_file);
 #endif
-	nob_temp_rewind(temp_checkpoint);
 }
 
 void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source){
@@ -300,7 +296,7 @@ void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source){
 	}
 }
 
-enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, Nob_String_Builder *sb, const char *source_dir, const char *output_dir, const char *src_extension, bool debug, bool shared, bool force_rebuild){
+enum RESULT nob_cmd_process_source_dir(Nob_Cmd *item_cmd, const char *source_dir, const char *output_dir, const char *src_extension, bool debug, bool shared, bool force_rebuild){
 	enum RESULT result = SUCCESS;
 	Nob_Cmd obj_cmd = {0};
 	Nob_Procs procs = {0};
@@ -321,9 +317,9 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, Nob_Stri
 	for (int i = 0; i < file_list.count; ++i){
 		src_file = get_file_name_no_extension(file_list.items[i]);
 		src_name = nob_temp_cstr_from_string_view(&src_file);
-		src_file_path = nob_sb_store_cstr(&obj_sb, nob_temp_sprintf("%s%s%s", source_dir, src_name, src_extension));
+		src_file_path = nob_temp_sprintf("%s%s%s", source_dir, src_name, src_extension);
 		// TODO: Add MSVC obj
-		bin_path = nob_sb_store_cstr(sb, nob_temp_sprintf("%s%s.o", output_dir, src_name));
+		bin_path = nob_temp_sprintf("%s%s.o", output_dir, src_name);
 		if (bin_path == NULL){
 			nob_log(NOB_ERROR, "Failed to allocate binary file path cstr: %s", nob_temp_sprintf("%s%s.o", output_dir, src_name));
 			assert(false);
@@ -345,7 +341,6 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *cmd, Nob_Cmd *item_cmd, Nob_Stri
 			assert(false);
 			nob_return_defer(FAILED);
 		}
-		nob_cc_inputs(cmd, bin_path);
 		nob_temp_rewind(temp_checkpoint);
 	}
 
