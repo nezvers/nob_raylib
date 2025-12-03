@@ -269,6 +269,9 @@ void get_include_directories(Nob_Cmd *cmd){
 }
 
 void get_defines(Nob_Cmd *cmd){
+	// Apple example - https://github.com/ImplodedPotato/C-nob-raylib-template
+	// web example & hotreload - https://github.com/angelcaru/raylib-template/blob/master/nob.c
+	// reference - https://github.com/OleksiiBulba/c-nob.h-raylib-template
 	if (current_config.platform == PLATFORM_WEB){
 		// TODO: This is more like placeholder
 		nob_cmd_append(cmd, "-Os", "-Wall");
