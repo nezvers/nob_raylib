@@ -9,7 +9,7 @@
 - Template supports platforms: Windows, Linux (X11). More to come.
     
 ## The only requirements are:    
-- C compiler (gcc, clang, mingw, tinyc, msvc (mostly) )
+- C compiler (gcc, clang, mingw, msvc (in progress) )
 - `make` or `mingw32-make`    
 - `gdb` for debugging    
     
@@ -24,7 +24,7 @@
     ```./nob -debug```    
 - `-name` with `"Name"` to build executable with your provided name (default:"nob_raylib").    
     ```./nob -name "Raylib Template"```
-- `-platform` to select build for target platform [`desktop`, `web` (in-progress) ] (default:"desktop").    
+- `-platform` to select build for target platform [`desktop`, `web` (in progress) ] (default:"desktop").    
     ```./nob -platform desktop```
 
 ## Compilation hints
@@ -33,7 +33,6 @@
 ## TODO
 - Add WASM builds with emscriptem
 - Add Linux Wayland support
-- Compile only updated source files
 - Add option to fetch source files from provided directories
 - Expand nob arguments (-help, -platform, -debug, -name)
 - Add compilation linking for APPLE (not personally interested, pull requests are welcome)  
