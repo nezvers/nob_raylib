@@ -1,7 +1,13 @@
 #ifndef NOB_UTILS_H
 #define NOB_UTILS_H
 
-// don't include nob.h, asume it is already included before this
+#ifdef NOB_IMPLEMENTATION
+    #undef NOB_IMPLEMENTATION
+    #include "nob.h"
+    #define NOB_IMPLEMENTATION
+#else
+    #include "nob.h"
+#endif
 
 // REDEFINE nob_cc - https://web.archive.org/web/20160308010351/https://beefchunk.com/documentation/lang/c/pre-defined-c/precomp.html
 #undef nob_cc
