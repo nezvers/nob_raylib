@@ -96,7 +96,6 @@ defer:
 enum RESULT nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, const char *extension){
 	enum RESULT result = SUCCESS;
 	Nob_File_Type type = nob_get_file_type(dir_path);
-	size_t temp_checkpoint = nob_temp_save();
 	if (type < 0) nob_return_defer(FAILED);
 	if (type != NOB_FILE_DIRECTORY) nob_return_defer(FAILED);
 	
@@ -113,7 +112,6 @@ enum RESULT nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, con
 	}
 
 defer:
-	nob_temp_rewind(temp_checkpoint);
 	nob_da_free(children);
 	return result;
 }
@@ -308,8 +306,12 @@ enum RESULT nob_cmd_input_objects_dir(Nob_Cmd *cmd, const char *obj_dir, Nob_Fil
 		assert(false);
 		nob_return_defer(FAILED);
 	}
+	const char *file_path;
+	const char *file_name;
 	for (int i = 0; i < file_list->count; ++i){
-		nob_cc_inputs(cmd, file_list->items[i]);
+		file_name = file_list->items[i];
+		file_path = nob_temp_sprintf("%s%s", obj_dir, file_name);
+		nob_cc_inputs(cmd, file_path);
 	}
 defer:
 	return result;
