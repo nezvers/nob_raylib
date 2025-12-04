@@ -87,21 +87,17 @@ SOFTWARE.
  *
  * ====================== Todo ======================
  *
+ * - [ ] Try `const volatile` for debug const declarations
+ *
  * - [ ] I shouldn't need two separate approaches for temp variables and main
  *       variables. Just malloc and make the interface way easier to work with.
  *
  * - [ ] adjust_register_global_float could maybe use adjust_register_global
  *       typeof, and then fail on unsupported type
  *
- * - [x] Store file modification times, and only re-read when necessary
- *
  * - [ ] I think if you do ADJUST_VAR_FLOAT(a, 2.0f) and then something
  *       like deregister_short, then everything could work. It means adding
  *       supporting remove in dynamic arrays. It's a litle obnoxious, though.
- *
- * - [x] Adjust update and with a second more targeted adjust_update_file so
- *       that users can be really specific if they want to be. Also, add an
- *       example to show the difference.
  *
  * - [ ] Need to add some kind of automatic testing to make life easier
  *
@@ -150,6 +146,10 @@ SOFTWARE.
  *       adjust_register_global_int(g_a);
  *       adjust_register_global_int(g_a);
  *       ```
+ *
+ *    3. If you declare a global_int and register it as a float, there is an
+ *       error that is not detected, but is breaking. This should be detected
+ *       and reported as an error.
  *
  * ====================== FAQ ======================
  *
