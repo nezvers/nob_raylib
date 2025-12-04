@@ -61,7 +61,38 @@ const char *get_raylib_platform(enum PLATFORM_TARGET platform){
 	}
 }
 
-enum RESULT setup_raylib(){
+void link_raylib(Nob_Cmd *cmd){
+	nob_cmd_append(cmd, "-L", RAYLIB_SRC_DIR, "-lraylib");
+
+	switch (current_config.platform){
+		case (PLATFORM_DESKTOP_SDL):
+		case (PLATFORM_DESKTOP_GLFW):
+		case (PLATFORM_DESKTOP_RGFW):
+	    case (PLATFORM_DESKTOP):
+		// TODO: refactor to use the ones that are needed in context
+#if defined(WINDOWS)
+	#if defined(_MSC_VER)
+			nob_cmd_append(cmd, "Winmm.lib", "gdi32.lib", "User32.lib", "Shell32.lib", "Ole32.lib", "comdlg32.lib");
+	#else
+			nob_cmd_append(cmd, "-lgdi32", "-lwinmm", "-lopengl32", "-lole32");
+	#endif
+#elif defined(LINUX)
+			nob_cmd_append(cmd, "-lm", "-ldl", "-lpthread", "-lGL", "-lX11");
+#endif
+			break;
+		case (PLATFORM_WEB):
+		    // TODO:
+			break;
+		case (PLATFORM_ANDROID):
+		    // TODO:
+			break;
+		case (PLATFORM_DRM):
+		    // TODO:
+			break;
+	}
+}
+
+enum RESULT setup_raylib(bool force_rebuild, Nob_Cmd *link_cmd){
 	enum RESULT result = SUCCESS;
 	Nob_Cmd raylib_cmd = {0};
 	size_t temp_checkpoint = nob_temp_save();
@@ -90,7 +121,8 @@ enum RESULT setup_raylib(){
 	}
 
 	// Compile
-	bool need_rebuild = previous_config != NULL && previous_config->platform != current_config.platform;
+	bool need_rebuild = force_rebuild || (previous_config != NULL && previous_config->platform != current_config.platform);
+	// TODO: match check in context of compiler (*.a doesn't work for msvc)
 	if (!nob_file_exists(RAYLIB_SRC_DIR "libraylib.a") || need_rebuild){
 		nob_log(NOB_INFO, "Changing directory: %s ", RAYLIB_SRC_DIR);
 		if (!nob_set_current_dir(nob_temp_sprintf("./%s", RAYLIB_SRC_DIR))){
@@ -124,6 +156,8 @@ enum RESULT setup_raylib(){
 		nob_return_defer(FAILED);
 	}
 
+	link_raylib(link_cmd);
+
 defer:
 	nob_temp_rewind(temp_checkpoint);
 	return result;
@@ -133,36 +167,6 @@ void get_include_raylib(Nob_Cmd *cmd){
 	nob_cmd_append(cmd, "-I", RAYLIB_SRC_DIR);
 }
 
-void link_raylib(Nob_Cmd *cmd){
-	nob_cmd_append(cmd, "-L", RAYLIB_SRC_DIR, "-lraylib");
-
-	switch (current_config.platform){
-		case (PLATFORM_DESKTOP_SDL):
-		case (PLATFORM_DESKTOP_GLFW):
-		case (PLATFORM_DESKTOP_RGFW):
-	    case (PLATFORM_DESKTOP):
-		// TODO: refactor to use the ones that are needed in context
-#if defined(WINDOWS)
-	#if defined(_MSC_VER)
-			nob_cmd_append(cmd, "Winmm.lib", "gdi32.lib", "User32.lib", "Shell32.lib", "Ole32.lib", "comdlg32.lib");
-	#else
-			nob_cmd_append(cmd, "-lgdi32", "-lwinmm", "-lopengl32", "-lole32");
-	#endif
-#elif defined(LINUX)
-			nob_cmd_append(cmd, "-lm", "-ldl", "-lpthread", "-lGL", "-lX11");
-#endif
-			break;
-		case (PLATFORM_WEB):
-		    // TODO:
-			break;
-		case (PLATFORM_ANDROID):
-		    // TODO:
-			break;
-		case (PLATFORM_DRM):
-		    // TODO:
-			break;
-	}
-}
 //---------------------------------------------------------------------------------
 // Emscripten
 enum RESULT setup_emscripten(){
@@ -424,7 +428,12 @@ enum RESULT compile_project(){
 	// TODO: force_rebuild for specific modules through nob arguments
 	bool force_rebuild = false;
 	if (compile_load_library(force_rebuild, &link_cmd) == FAILED) nob_return_defer(FAILED);
-	link_raylib(&link_cmd);
+	
+	if (setup_raylib(force_rebuild, &link_cmd) == FAILED){
+		nob_log(NOB_ERROR, "Failed to setup RAYLIB.");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
 
 	if (compile_main(force_rebuild, &link_cmd) == FAILED) nob_return_defer(FAILED);
 	
@@ -513,12 +522,6 @@ int main(int argc, char **argv){
 	// TODO: move to compile project
 	if (current_config.platform == PLATFORM_WEB && setup_web() == FAILED){
 		nob_log(NOB_ERROR, "Failed to setup web.");
-		assert(false);
-		nob_return_defer(FAILED);
-	}
-	// TODO: move to compile project
-	if (setup_raylib() == FAILED){
-		nob_log(NOB_ERROR, "Failed to setup RAYLIB.");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
