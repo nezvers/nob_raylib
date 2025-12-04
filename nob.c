@@ -319,21 +319,15 @@ void link_platform(Nob_Cmd *cmd){
 	}
 }
 
-enum RESULT compile_project(){
+enum RESULT compile_load_library(bool force_rebuild){
 	enum RESULT result = SUCCESS;
-	Nob_Cmd main_obj_cmd = {0};
+	size_t temp_checkpoint = nob_temp_save();
+	Nob_File_Paths file_list = {0};
 	Nob_Cmd load_lib_obj_cmd = {0};
 	Nob_Cmd load_lib_cmd = {0};
-	size_t temp_checkpoint = nob_temp_save();
-	Nob_Cmd main_cmd = {0};
-	Nob_File_Paths file_list = {0};
-	
-	bool force_rebuild = false;
+
 	bool is_shared = false;
 
-	// * LOAD LIBRARY - static
-	// TODO: skip for non-desktop
-	// objs
 	nob_cc_flags(&load_lib_obj_cmd);
 	nob_cmd_optimize(&load_lib_obj_cmd, current_config.optimize);
 	get_include_directories(&load_lib_obj_cmd);
@@ -353,10 +347,24 @@ enum RESULT compile_project(){
 		assert(false);
 		nob_return_defer(FAILED);
 	}
-	// Reset memory
-	nob_temp_rewind(temp_checkpoint);
+
+defer:
 	nob_da_free(file_list);
-	file_list = (Nob_File_Paths){0};
+	nob_temp_rewind(temp_checkpoint);
+	return result;
+}
+
+enum RESULT compile_project(){
+	enum RESULT result = SUCCESS;
+	Nob_Cmd main_obj_cmd = {0};
+	size_t temp_checkpoint = nob_temp_save();
+	Nob_Cmd main_cmd = {0};
+	Nob_File_Paths file_list = {0};
+	
+	bool force_rebuild = false;
+	bool is_shared = false;
+
+	if (compile_load_library(force_rebuild) == FAILED) nob_return_defer(FAILED);
 	
 	// * MAIN - executable
 	// objs
@@ -407,8 +415,6 @@ defer:
 	nob_temp_rewind(temp_checkpoint);
 	nob_cmd_free(main_obj_cmd);
 	nob_cmd_free(main_cmd);
-	nob_cmd_free(load_lib_obj_cmd);
-	nob_cmd_free(load_lib_cmd);
 	nob_da_free(file_list);
 	return result;
 }
