@@ -319,7 +319,7 @@ void link_platform(Nob_Cmd *cmd){
 	}
 }
 
-enum RESULT compile_load_library(bool force_rebuild){
+enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd){
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
 	Nob_File_Paths file_list = {0};
@@ -341,12 +341,25 @@ enum RESULT compile_load_library(bool force_rebuild){
 	temp_checkpoint = nob_temp_save();
 	nob_cmd_new_static_library(&load_lib_cmd, "load_library", LIB_FOLDER);
 	nob_cmd_input_objects_dir(&load_lib_cmd, OBJ_FOLDER  "load_library/", &file_list);
-	// nob_cc_inputs(&load_lib_cmd, OBJ_FOLDER "load_library/load_library.o");
 	if (!nob_cmd_run(&load_lib_cmd)){
 		nob_log(NOB_ERROR, "Failed building load_library.a");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
+	
+	// NOTE: Can't use temp strings
+#if _MSC_VER
+	nob_cmd_append(link_cmd, LIB_FOLDER "libload_library.lib");
+	nob_cmd_append(link_cmd, "Kernel32.lib");
+#else
+	nob_cmd_append(link_cmd, "-L" LIB_FOLDER);
+	nob_cmd_append(link_cmd, "-lload_library");
+	#if defined(WINDOWS)
+		nob_cmd_append(link_cmd, "-lkernel32");
+	#else
+		nob_cmd_append(link_cmd, "-ldl");
+	#endif
+#endif
 
 defer:
 	nob_da_free(file_list);
@@ -354,20 +367,15 @@ defer:
 	return result;
 }
 
-enum RESULT compile_project(){
+enum RESULT compile_main(bool force_rebuild, Nob_Cmd *link_cmd){
 	enum RESULT result = SUCCESS;
-	Nob_Cmd main_obj_cmd = {0};
 	size_t temp_checkpoint = nob_temp_save();
-	Nob_Cmd main_cmd = {0};
 	Nob_File_Paths file_list = {0};
+	Nob_Cmd main_obj_cmd = {0};
+	Nob_Cmd main_cmd = {0};
 	
-	bool force_rebuild = false;
 	bool is_shared = false;
-
-	if (compile_load_library(force_rebuild) == FAILED) nob_return_defer(FAILED);
 	
-	// * MAIN - executable
-	// objs
 	nob_cc_flags(&main_obj_cmd);
 	get_defines(&main_obj_cmd);
 	get_include_raylib(&main_obj_cmd);
@@ -391,19 +399,7 @@ enum RESULT compile_project(){
 		nob_cc_output(&main_cmd, project_name);
 	}
 	nob_cmd_input_objects_dir(&main_cmd, OBJ_FOLDER  "main/", &file_list);
-	link_raylib(&main_cmd);
-	
-	// TODO: Only for Hot-Reload + abstract kernel32 & dl for compilers
-	nob_cmd_link_lib(&main_cmd, LIB_FOLDER, "load_library");
-#if _MSC_VER
-	nob_cmd_append(&main_cmd, "Kernel32.lib");
-#else
-	#if defined(WINDOWS)
-		nob_cmd_append(&main_cmd, "-lkernel32");
-	#else
-		nob_cmd_append(&main_cmd, "-ldl");
-	#endif
-#endif
+	nob_cmd_append_cmd(&main_cmd, link_cmd);
 	
 	if (!nob_cmd_run(&main_cmd)){
 		nob_log(NOB_ERROR, "Failed to compile app");
@@ -412,10 +408,29 @@ enum RESULT compile_project(){
 	}
 
 defer:
-	nob_temp_rewind(temp_checkpoint);
 	nob_cmd_free(main_obj_cmd);
 	nob_cmd_free(main_cmd);
 	nob_da_free(file_list);
+	nob_temp_rewind(temp_checkpoint);
+	return result;
+}
+
+enum RESULT compile_project(){
+	enum RESULT result = SUCCESS;
+	size_t temp_checkpoint = nob_temp_save();
+	// Append only constant commands used at the end for main executable compilation
+	Nob_Cmd link_cmd = {0};
+	
+	// TODO: force_rebuild for specific modules through nob arguments
+	bool force_rebuild = false;
+	if (compile_load_library(force_rebuild, &link_cmd) == FAILED) nob_return_defer(FAILED);
+	link_raylib(&link_cmd);
+
+	if (compile_main(force_rebuild, &link_cmd) == FAILED) nob_return_defer(FAILED);
+	
+defer:
+	nob_temp_rewind(temp_checkpoint);
+	nob_cmd_free(link_cmd);
 	return result;
 }
 
@@ -495,13 +510,13 @@ int main(int argc, char **argv){
 	if (load_binary(&saved_config, sizeof(saved_config), BUILD_FOLDER CONFIG_FILE_NAME, config_version) == 0){
 		previous_config = &saved_config;
 	}
-
+	// TODO: move to compile project
 	if (current_config.platform == PLATFORM_WEB && setup_web() == FAILED){
 		nob_log(NOB_ERROR, "Failed to setup web.");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
-
+	// TODO: move to compile project
 	if (setup_raylib() == FAILED){
 		nob_log(NOB_ERROR, "Failed to setup RAYLIB.");
 		assert(false);
