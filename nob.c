@@ -62,7 +62,12 @@ const char *get_raylib_platform(enum PLATFORM_TARGET platform){
 }
 
 void link_raylib(Nob_Cmd *cmd){
+#if defined(_MSC_VER)
+	// TODO: fix reverse directory slash
+	nob_cmd_append(cmd, RAYLIB_SRC_DIR, "raylib.lib");
+#else
 	nob_cmd_append(cmd, "-L", RAYLIB_SRC_DIR, "-lraylib");
+#endif
 
 	switch (current_config.platform){
 		case (PLATFORM_DESKTOP_SDL):
@@ -72,9 +77,9 @@ void link_raylib(Nob_Cmd *cmd){
 		// TODO: refactor to use the ones that are needed in context
 #if defined(WINDOWS)
 	#if defined(_MSC_VER)
-			nob_cmd_append(cmd, "Winmm.lib", "gdi32.lib", "User32.lib", "Shell32.lib", "Ole32.lib", "comdlg32.lib");
+			nob_cmd_append(cmd, "opengl32.lib", "gdi32.lib", "winmm.lib", "user32.lib", "kernel32.lib", "shell32.lib", "msvcrt.lib");//, "Ole32.lib", "comdlg32.lib");
 	#else
-			nob_cmd_append(cmd, "-lgdi32", "-lwinmm", "-lopengl32", "-lole32");
+			nob_cmd_append(cmd, "-lopengl32", "-lgdi32", "-lwinmm");//, "-lole32");
 	#endif
 #elif defined(LINUX)
 			nob_cmd_append(cmd, "-lm", "-ldl", "-lpthread", "-lGL", "-lX11");
@@ -133,8 +138,7 @@ enum RESULT setup_raylib(bool force_rebuild, Nob_Cmd *link_cmd){
 
 		nob_cmd_make(&raylib_cmd);
 		const char *raylib_platform = get_raylib_platform(current_config.platform);
-		nob_cmd_append(&raylib_cmd, raylib_platform);
-		// defer failure after redurning current working directory
+		nob_cmd_append(&raylib_cmd, raylib_platform, "-j4");
 		bool compile_success = nob_cmd_run(&raylib_cmd);
 
 		nob_log(NOB_INFO, "Changing directory: %s ", "../../../");
@@ -269,7 +273,11 @@ defer:
 //---------------------------------------------------------------------------------
 // Source
 void get_include_directories(Nob_Cmd *cmd){
+#if defined(_MSC_VER)
+	nob_cmd_append(cmd, "/I" INCLUDE_FOLDER);
+#else
 	nob_cmd_append(cmd, "-I", INCLUDE_FOLDER);
+#endif
 }
 
 void get_defines(Nob_Cmd *cmd){
@@ -427,7 +435,11 @@ enum RESULT compile_project(){
 	
 	// TODO: force_rebuild for specific modules through nob arguments
 	bool force_rebuild = false;
-	if (compile_load_library(force_rebuild, &link_cmd) == FAILED) nob_return_defer(FAILED);
+	if (compile_load_library(force_rebuild, &link_cmd) == FAILED){
+		nob_log(NOB_ERROR, "Failed to compile load_library.");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
 	
 	if (setup_raylib(force_rebuild, &link_cmd) == FAILED){
 		nob_log(NOB_ERROR, "Failed to setup RAYLIB.");
@@ -435,7 +447,11 @@ enum RESULT compile_project(){
 		nob_return_defer(FAILED);
 	}
 
-	if (compile_main(force_rebuild, &link_cmd) == FAILED) nob_return_defer(FAILED);
+	if (compile_main(force_rebuild, &link_cmd) == FAILED){
+		nob_log(NOB_ERROR, "Failed to compile main module.");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
 	
 defer:
 	nob_temp_rewind(temp_checkpoint);
