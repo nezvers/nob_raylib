@@ -21,12 +21,14 @@ typedef struct {
     size_t size;
 } PlugState;
 
-static PlugState *p;
+static PlugState *p = NULL;
 
 static void load_assets(void){
+    printf("load_assets()\n");
 }
 
 static void unload_assets(void){
+    printf("unload_assets()\n");
 }
 
 void init(void){
@@ -40,6 +42,7 @@ void init(void){
 }
 
 void *save_state(void){
+    printf("save_state()\n");
     unload_assets();
     return p;
 }
@@ -56,11 +59,14 @@ void load_state(void *state){
 }
 
 void free_state(void){
+    printf("free_state()\n");
     unload_assets();
 }
 
 void update(void *data){
+    printf("update()\n");
 }
 
 void reset(void){
+    printf("reset()\n");
 }

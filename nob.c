@@ -402,14 +402,9 @@ enum RESULT compile_main(bool force_rebuild, Nob_Cmd *link_cmd){
 	
 
 	nob_cc(&main_cmd);
-	if (current_config.is_debug){
-		// Place inside build folder
-		nob_cc_output(&main_cmd, nob_temp_sprintf("%s%s", BUILD_FOLDER, project_name));
-	}
-	else{
-		// Place in root folder, next to resources folder
-		nob_cc_output(&main_cmd, project_name);
-	}
+	// Place inside build folder
+	nob_cc_output(&main_cmd, nob_temp_sprintf("%s%s", BUILD_FOLDER, project_name));
+	
 	nob_cmd_input_objects_dir(&main_cmd, OBJ_FOLDER  "main/", &file_list);
 	nob_cmd_append_cmd(&main_cmd, link_cmd);
 	
