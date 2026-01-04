@@ -254,26 +254,26 @@ void nob_cmd_output_shared_object(Nob_Cmd *cmd, const char *src_path, const char
 #endif
 }
 
-void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *directory, bool debug){
-	size_t temp_checkpoint = nob_temp_save();
+void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *out_dir, bool debug){
+	// size_t temp_checkpoint = nob_temp_save();
 #if defined(_MSC_VER)
 	// TODO: add missing MSVC flags
 	if (debug) nob_cmd_append(cmd, "/LDd");
 	else nob_cmd_append(cmd, "/LD");
 
-	nob_cmd_append(cmd, nob_temp_sprintf("/F%s", directory));
-	nob_cmd_append(cmd, nob_temp_sprintf("/Fe%slib%s.dll", directory, name));
+	nob_cmd_append(cmd, nob_temp_sprintf("/F%s", out_dir));
+	nob_cmd_append(cmd, nob_temp_sprintf("/Fe%slib%s.dll", out_dir, name));
 #else
 	if (debug) nob_cmd_append(cmd, "-g");
 	nob_cmd_append(cmd, "-shared", "-o");
 	#if defined(WINDOWS)
-		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.dll", directory, name));
+		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.dll", out_dir, name));
 		nob_cmd_append(cmd, "-Wl", "--out-implib");
 	#elif defined(LINUX)
-		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.so", directory, name));
+		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.so", out_dir, name));
 	#endif
 #endif
-	nob_temp_rewind(temp_checkpoint);
+	// nob_temp_rewind(temp_checkpoint);
 }
 
 void nob_cmd_new_static_library(Nob_Cmd *cmd, const char *name, const char *dir_path){
@@ -350,8 +350,8 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *item_cmd, const char *source_dir
 		if (rebuild_is_needed < 0) nob_return_defer(FAILED);
 		if (rebuild_is_needed == 0 && !force_rebuild) continue;
 		
+		// TODO: Add MSVC support/flags
 		nob_cc(&obj_cmd);
-		// TODO: Add MSVC flags
 		nob_cmd_append(&obj_cmd, "-c", src_file_path);
 		nob_cmd_append(&obj_cmd, "-o", bin_path);
 		if (shared) nob_cmd_append(&obj_cmd, "-fpic");

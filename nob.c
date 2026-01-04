@@ -160,7 +160,7 @@ enum RESULT setup_raylib(bool force_rebuild, Nob_Cmd *link_cmd){
 		nob_return_defer(FAILED);
 	}
 
-	link_raylib(link_cmd);
+	// link_raylib(link_cmd);
 
 defer:
 	nob_temp_rewind(temp_checkpoint);
@@ -312,12 +312,13 @@ void get_defines(Nob_Cmd *cmd){
 	}
 	else{
 		nob_cmd_append(cmd, "-DRELEASE");
-		nob_cmd_append(cmd, "-DMODE_PRODUCTION"); // disable adjust.h "passive" hotreload
+		// nob_cmd_append(cmd, "-DMODE_PRODUCTION"); // disable adjust.h "passive" hotreload
 		nob_cmd_append(cmd, "-D", "RESOURCES_PATH=" RESOURCES_FOLDER);
 	}
 	nob_cmd_optimize(cmd, current_config.optimize);
 }
 
+// TODO: NOT USED
 void link_platform(Nob_Cmd *cmd){
 	if (current_config.platform == PLATFORM_WEB){
 
@@ -331,6 +332,53 @@ void link_platform(Nob_Cmd *cmd){
 	}
 }
 
+enum RESULT compile_plug_template(bool force_rebuild){
+	enum RESULT result = SUCCESS;
+	size_t temp_checkpoint = nob_temp_save();
+	Nob_File_Paths file_list = {0};
+	Nob_Cmd plug_obj_cmd = {0};
+	Nob_Cmd plug_lib_cmd = {0};
+
+	bool is_shared = true;
+	nob_cc_flags(&plug_obj_cmd);
+	nob_cmd_optimize(&plug_obj_cmd, current_config.optimize);
+	get_include_directories(&plug_obj_cmd);
+	if (nob_cmd_process_source_dir(&plug_obj_cmd, "plug_template/", OBJ_FOLDER "plug_template/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+		nob_log(NOB_ERROR, "Failed building load_library.o");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+	nob_temp_rewind(temp_checkpoint);
+
+	
+	temp_checkpoint = nob_temp_save();
+	nob_cc(&plug_lib_cmd);
+	nob_cmd_input_objects_dir(&plug_lib_cmd, OBJ_FOLDER  "plug_template/", &file_list);
+	nob_cmd_output_shared_library(&plug_lib_cmd, "plug_template", BUILD_FOLDER, current_config.is_debug);
+
+	nob_cmd_append(&plug_lib_cmd, "-Wl",);
+#if defined(WINDOWS)
+	nob_cmd_append(&plug_lib_cmd, "--out-implib", "-lkernel32");
+#else
+
+#endif
+
+	if (!nob_cmd_run(&plug_lib_cmd)){
+		nob_log(NOB_ERROR, "Failed building load_library.a");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+
+
+defer:
+	nob_cmd_free(plug_obj_cmd);
+	nob_cmd_free(plug_lib_cmd);
+	nob_da_free(file_list);
+	nob_temp_rewind(temp_checkpoint);
+	return result;
+}
+
+
 enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd){
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
@@ -340,6 +388,7 @@ enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd){
 
 	bool is_shared = false;
 
+	// Object files
 	nob_cc_flags(&load_lib_obj_cmd);
 	nob_cmd_optimize(&load_lib_obj_cmd, current_config.optimize);
 	get_include_directories(&load_lib_obj_cmd);
@@ -350,6 +399,7 @@ enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd){
 	}
 	nob_temp_rewind(temp_checkpoint);
 
+	// static lib
 	temp_checkpoint = nob_temp_save();
 	nob_cmd_new_static_library(&load_lib_cmd, "load_library", LIB_FOLDER);
 	nob_cmd_input_objects_dir(&load_lib_cmd, OBJ_FOLDER  "load_library/", &file_list);
@@ -374,6 +424,8 @@ enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd){
 #endif
 
 defer:
+	nob_cmd_free(load_lib_obj_cmd);
+	nob_cmd_free(load_lib_cmd);
 	nob_da_free(file_list);
 	nob_temp_rewind(temp_checkpoint);
 	return result;
@@ -404,9 +456,10 @@ enum RESULT compile_main(bool force_rebuild, Nob_Cmd *link_cmd){
 	nob_cc(&main_cmd);
 	// Place inside build folder
 	nob_cc_output(&main_cmd, nob_temp_sprintf("%s%s", BUILD_FOLDER, project_name));
-	
+
 	nob_cmd_input_objects_dir(&main_cmd, OBJ_FOLDER  "main/", &file_list);
 	nob_cmd_append_cmd(&main_cmd, link_cmd);
+	link_raylib(&main_cmd);
 	
 	if (!nob_cmd_run(&main_cmd)){
 		nob_log(NOB_ERROR, "Failed to compile app");
