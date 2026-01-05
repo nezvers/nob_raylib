@@ -333,6 +333,7 @@ void link_platform(Nob_Cmd *cmd){
 }
 
 enum RESULT compile_plug_template(bool force_rebuild){
+	// Reference - https://web.archive.org/web/20201109103748/http://www.mingw.org/wiki/sampledll
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
 	Nob_File_Paths file_list = {0};
@@ -500,12 +501,13 @@ enum RESULT compile_project(){
 		assert(false);
 		nob_return_defer(FAILED);
 	}
-
-	if (compile_plug_template(force_rebuild) == FAILED){
-		nob_log(NOB_ERROR, "Failed to compile plug template.");
-		assert(false);
-		nob_return_defer(FAILED);
-	}
+/*
+if (compile_plug_template(force_rebuild) == FAILED){
+	nob_log(NOB_ERROR, "Failed to compile plug template.");
+	assert(false);
+	nob_return_defer(FAILED);
+}
+*/
 
 defer:
 	nob_temp_rewind(temp_checkpoint);
