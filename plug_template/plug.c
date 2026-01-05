@@ -31,6 +31,10 @@ static void unload_assets(void){
     printf("unload_assets()\n");
 }
 
+void reset(void){
+    printf("reset()\n");
+}
+
 void init(void){
     p = malloc(sizeof(*p));
     assert(p != NULL);
@@ -38,7 +42,7 @@ void init(void){
     p->size = sizeof(*p);
 
     load_assets();
-    plug_reset();
+    reset();
 }
 
 void *save_state(void){
@@ -65,8 +69,4 @@ void free_state(void){
 
 void update(void *data){
     printf("update()\n");
-}
-
-void reset(void){
-    printf("reset()\n");
 }

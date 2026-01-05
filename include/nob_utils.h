@@ -268,7 +268,6 @@ void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *o
 	nob_cmd_append(cmd, "-shared", "-o");
 	#if defined(WINDOWS)
 		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.dll", out_dir, name));
-		nob_cmd_append(cmd, "-Wl", "--out-implib");
 	#elif defined(LINUX)
 		nob_cmd_append(cmd, nob_temp_sprintf("%slib%s.so", out_dir, name));
 	#endif

@@ -355,10 +355,10 @@ enum RESULT compile_plug_template(bool force_rebuild){
 	nob_cc(&plug_lib_cmd);
 	nob_cmd_input_objects_dir(&plug_lib_cmd, OBJ_FOLDER  "plug_template/", &file_list);
 	nob_cmd_output_shared_library(&plug_lib_cmd, "plug_template", BUILD_FOLDER, current_config.is_debug);
-
-	nob_cmd_append(&plug_lib_cmd, "-Wl",);
-#if defined(WINDOWS)
-	nob_cmd_append(&plug_lib_cmd, "--out-implib", "-lkernel32");
+	
+	#if defined(WINDOWS)
+	nob_cmd_append(&plug_lib_cmd, "-Wl,--out-implib,"LIB_FOLDER"/libplug_template.a");
+	nob_cmd_append(&plug_lib_cmd, "-lkernel32");
 #else
 
 #endif
@@ -500,7 +500,13 @@ enum RESULT compile_project(){
 		assert(false);
 		nob_return_defer(FAILED);
 	}
-	
+
+	if (compile_plug_template(force_rebuild) == FAILED){
+		nob_log(NOB_ERROR, "Failed to compile plug template.");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+
 defer:
 	nob_temp_rewind(temp_checkpoint);
 	nob_cmd_free(link_cmd);
