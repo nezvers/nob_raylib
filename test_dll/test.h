@@ -21,6 +21,13 @@
   #endif
 #endif
 
-MYLIB_API void print_hello();
+/* Optional: C++ compatibility */
+#ifdef __cplusplus
+  #define MYLIB_EXTERN extern "C"
+#else
+  #define MYLIB_EXTERN extern
+#endif
+
+MYLIB_EXTERN MYLIB_API void print_hello();
 
 #endif // TEST_LIB_H

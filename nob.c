@@ -461,6 +461,58 @@ defer:
 	return result;
 }
 
+enum RESULT compile_plug_host(bool force_rebuild, Nob_Cmd *link_cmd){
+	enum RESULT result = SUCCESS;
+	size_t temp_checkpoint = nob_temp_save();
+	Nob_File_Paths file_list = {0};
+	Nob_Cmd obj_cmd = {0};
+	Nob_Cmd lib_cmd = {0};
+
+	bool is_shared = false;
+
+	// Object files
+	nob_cc_flags(&obj_cmd);
+	nob_cmd_optimize(&obj_cmd, current_config.optimize);
+	get_include_directories(&obj_cmd);
+	if (nob_cmd_process_source_dir(&obj_cmd, SOURCE_FOLDER "plug_host/", OBJ_FOLDER "plug_host/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+		nob_log(NOB_ERROR, "Failed building plug_host.o");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+	nob_temp_rewind(temp_checkpoint);
+
+	// static lib
+	temp_checkpoint = nob_temp_save();
+	nob_cmd_new_static_library(&lib_cmd, "plug_host", LIB_FOLDER);
+	nob_cmd_input_objects_dir(&lib_cmd, OBJ_FOLDER  "plug_host/", &file_list);
+	if (!nob_cmd_run(&lib_cmd)){
+		nob_log(NOB_ERROR, "Failed building plug_host.a");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+	
+	// NOTE: Can't use temp strings
+#if _MSC_VER
+	nob_cmd_append(link_cmd, LIB_FOLDER "plug_host.lib");
+	nob_cmd_append(link_cmd, "Kernel32.lib"); 
+#else
+	nob_cmd_append(link_cmd, "-L" LIB_FOLDER);
+	nob_cmd_append(link_cmd, "-lplug_host");
+	#if defined(WINDOWS)
+		nob_cmd_append(link_cmd, "-lkernel32");
+	#else
+		nob_cmd_append(link_cmd, "-ldl");
+	#endif
+#endif
+
+defer:
+	nob_cmd_free(obj_cmd);
+	nob_cmd_free(lib_cmd);
+	nob_da_free(file_list);
+	nob_temp_rewind(temp_checkpoint);
+	return result;
+}
+
 enum RESULT compile_main(bool force_rebuild, Nob_Cmd *link_cmd){
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
@@ -514,6 +566,12 @@ enum RESULT compile_project(){
 	// TODO: force_rebuild for specific modules through nob arguments
 	bool force_rebuild = false;
 	if (compile_load_library(force_rebuild, &link_cmd) == FAILED){
+		nob_log(NOB_ERROR, "Failed to compile load_library.");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+
+	if (compile_plug_host(force_rebuild, &link_cmd) == FAILED){
 		nob_log(NOB_ERROR, "Failed to compile load_library.");
 		assert(false);
 		nob_return_defer(FAILED);

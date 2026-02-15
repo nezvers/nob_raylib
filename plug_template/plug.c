@@ -3,19 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PLUG_BUILD // Exports functions for DLL
 #include "plug.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define PLUG_DEFINITION(name, ret, ...) ret name(__VA_ARGS__);
-LIST_OF_PLUGS(PLUG_DEFINITION)
-#undef PLUG_DEFINITION
-
-#ifdef __cplusplus
-}
-#endif
 
 typedef struct {
     size_t size;
@@ -31,10 +21,12 @@ static void unload_assets(void){
     printf("unload_assets()\n");
 }
 
+/* exported */
 void reset(void){
     printf("reset()\n");
 }
 
+/* exported */
 void init(void){
     p = malloc(sizeof(*p));
     assert(p != NULL);
@@ -45,12 +37,14 @@ void init(void){
     reset();
 }
 
+/* exported */
 void *save_state(void){
     printf("save_state()\n");
     unload_assets();
     return p;
 }
 
+/* exported */
 void load_state(void *state){
     p = state;
     if (p->size < sizeof(*p)) {
@@ -62,11 +56,16 @@ void load_state(void *state){
     load_assets();
 }
 
-void free_state(void){
+/* exported */
+void free_state(void *state){
     printf("free_state()\n");
     unload_assets();
+    
+    free(state);
 }
 
+/* exported */
 void update(void *data){
+    (void)data;
     printf("update()\n");
 }
