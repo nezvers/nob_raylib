@@ -1,6 +1,7 @@
 #include "raylib.h" // www.raylib.com
 #include "adjust.h" // learn about features -> https://github.com/bi3mer/adjust.h
 #include "load_library.h"
+#include "plug_host.h"
 
 int main(void)
 {
@@ -15,18 +16,38 @@ int main(void)
     SetTargetFPS(60);
 
     // DLL TEST
-    void *test_lib;
+    const char *test_lib_path;
 #if defined(_WIN32)
-    test_lib = LibLoad("test_dll.dll");
+    test_lib_path = "test_dll.dll";
 #else
-    test_lib = LibLoad("test_dll.so");
+    test_lib_path = "test_dll.so";
 #endif
+    void *test_lib = LibLoad(test_lib_path);
     if (!LibIsValid(test_lib)){
         printf("Failed to load test_dll.dll\n");
     }
     else{
         void (*print_hello)() = LibGetSymbol(test_lib, "print_hello");
         print_hello();
+    }
+
+    // Plug Test
+    const char *plug_path;
+#if defined(_WIN32)
+    plug_path = "plug_template.dll";
+#else
+    plug_path = "plug_template.so";
+#endif
+    PlugApi plug_api;
+    if (!PlugLoad(plug_path, &plug_api)) {
+        printf("Failed to load plug_template\n");
+    } else {
+        plug_api.init();
+        plug_api.plug_state = plug_api.save_state();
+        plug_api.load_state(plug_api.plug_state);
+        plug_api.update(NULL);
+        plug_api.reset();
+        plug_api.free_state();
     }
 
     while (!WindowShouldClose())

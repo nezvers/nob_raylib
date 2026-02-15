@@ -27,17 +27,17 @@
   #define PLUG_EXTERN extern
 #endif
 
-#define LIST_OF_FUNCTIONS(FUNC_GENERATOR) \
+#define PLUG_LIST_FUNCTIONS(FUNC_GENERATOR) \
     FUNC_GENERATOR(init,          void, void)         /* Initialize the plugin */ \
     FUNC_GENERATOR(save_state,    void*, void)        /* Prepare old plugin, return it's state */ \
     FUNC_GENERATOR(load_state,    void, void*)        /* Give plugin previous state */ \
-    FUNC_GENERATOR(free_state,    void, void*)         /* Free any memory that needs to be freed */ \
+    FUNC_GENERATOR(free_state,    void, void)         /* Free any memory that needs to be freed */ \
     FUNC_GENERATOR(update,        void, void*)        /* Update state with given context data */ \
     FUNC_GENERATOR(reset,         void, void)         /* Reset the state of the plugin */ \
 
 // Use to generate function exports
 #define EXPORT_PLUG_FUNC(name, return_type, ...) PLUG_EXTERN PLUG_API return_type name(__VA_ARGS__);
-LIST_OF_FUNCTIONS(EXPORT_PLUG_FUNC)
+PLUG_LIST_FUNCTIONS(EXPORT_PLUG_FUNC)
 #undef EXPORT_PLUG_FUNC
 
 #undef PLUG_API
