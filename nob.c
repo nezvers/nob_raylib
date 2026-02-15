@@ -348,7 +348,7 @@ enum RESULT compile_plug(bool force_rebuild, const char *source_dir, const char 
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
 	get_include_directories(&obj_cmd);
 	if (nob_cmd_process_source_dir(&obj_cmd, source_dir, obj_dir, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
-		nob_log(NOB_ERROR, "Failed building plug_template.o");
+		nob_log(NOB_ERROR, nob_temp_sprintf( "Failed building %s.o", plug_name));
 		assert(false);
 		nob_return_defer(FAILED);
 	}
@@ -360,7 +360,7 @@ enum RESULT compile_plug(bool force_rebuild, const char *source_dir, const char 
 	nob_cmd_output_shared_library(&lib_cmd, plug_name, BUILD_FOLDER, current_config.is_debug);
 
 	if (!nob_cmd_run(&lib_cmd)){
-		nob_log(NOB_ERROR, "Failed building plug_template.a");
+		nob_log(NOB_ERROR, nob_temp_sprintf( "Failed building %s shared lib", plug_name));
 		assert(false);
 		nob_return_defer(FAILED);
 	}
