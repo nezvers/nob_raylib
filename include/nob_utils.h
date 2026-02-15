@@ -268,6 +268,9 @@ void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *o
 	nob_cmd_append(cmd, "-shared", "-o");
 	#if defined(WINDOWS)
 		nob_cmd_append(cmd, nob_temp_sprintf("%s%s.dll", out_dir, name));
+		// Create compile linking interface library
+		// TODO: need testing
+		//nob_cmd_append(cmd, nob_temp_sprintf("-Wl,--out-implib,\"%slib%s.lib\"", out_dir, name));
 	#elif defined(LINUX)
 		nob_cmd_append(cmd, nob_temp_sprintf("%s%s.so", out_dir, name));
 	#endif
