@@ -14,6 +14,21 @@ int main(void)
 
     SetTargetFPS(60);
 
+    // DLL TEST
+    void *test_lib;
+#if defined(_WIN32)
+    test_lib = LibLoad("test_dll.dll");
+#else
+    test_lib = LibLoad("test_dll.so");
+#endif
+    if (!LibIsValid(test_lib)){
+        printf("Failed to load test_dll.dll\n");
+    }
+    else{
+        void (*print_hello)() = LibGetSymbol(test_lib, "print_hello");
+        print_hello();
+    }
+
     while (!WindowShouldClose())
     {
         // Update

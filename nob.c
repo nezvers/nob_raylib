@@ -345,7 +345,7 @@ enum RESULT compile_plug_template(bool force_rebuild){
 	nob_cmd_optimize(&plug_obj_cmd, current_config.optimize);
 	get_include_directories(&plug_obj_cmd);
 	if (nob_cmd_process_source_dir(&plug_obj_cmd, "plug_template/", OBJ_FOLDER "plug_template/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
-		nob_log(NOB_ERROR, "Failed building load_library.o");
+		nob_log(NOB_ERROR, "Failed building plug_template.o");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
@@ -357,7 +357,7 @@ enum RESULT compile_plug_template(bool force_rebuild){
 	nob_cmd_input_objects_dir(&plug_lib_cmd, OBJ_FOLDER  "plug_template/", &file_list);
 	nob_cmd_output_shared_library(&plug_lib_cmd, "plug_template", BUILD_FOLDER, current_config.is_debug);
 	
-	#if defined(WINDOWS)
+#if defined(WINDOWS)
 	nob_cmd_append(&plug_lib_cmd, "-Wl,--out-implib,"LIB_FOLDER"/libplug_template.a");
 	nob_cmd_append(&plug_lib_cmd, "-lkernel32");
 #else
@@ -365,7 +365,7 @@ enum RESULT compile_plug_template(bool force_rebuild){
 #endif
 
 	if (!nob_cmd_run(&plug_lib_cmd)){
-		nob_log(NOB_ERROR, "Failed building load_library.a");
+		nob_log(NOB_ERROR, "Failed building plug_template.a");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
@@ -379,6 +379,53 @@ defer:
 	return result;
 }
 
+
+enum RESULT compile_test_dll(bool force_rebuild){
+	// Reference - https://web.archive.org/web/20201109103748/http://www.mingw.org/wiki/sampledll
+	enum RESULT result = SUCCESS;
+	size_t temp_checkpoint = nob_temp_save();
+	Nob_File_Paths file_list = {0};
+	Nob_Cmd obj_cmd = {0};
+	Nob_Cmd lib_cmd = {0};
+
+	bool is_shared = true;
+	nob_cc_flags(&obj_cmd);
+	nob_cmd_optimize(&obj_cmd, current_config.optimize);
+	get_include_directories(&obj_cmd);
+	if (nob_cmd_process_source_dir(&obj_cmd, "test_dll/", OBJ_FOLDER "test_dll/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+		nob_log(NOB_ERROR, "Failed building test_dll.o");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+	nob_temp_rewind(temp_checkpoint);
+
+	
+	temp_checkpoint = nob_temp_save();
+	nob_cc(&lib_cmd);
+	nob_cmd_input_objects_dir(&lib_cmd, OBJ_FOLDER  "test_dll/", &file_list);
+	nob_cmd_output_shared_library(&lib_cmd, "test_dll", BUILD_FOLDER, current_config.is_debug);
+	
+#if defined(WINDOWS)
+	// nob_cmd_append(&lib_cmd, "-Wl,--out-implib,"LIB_FOLDER"/test_dll.a"); // not needed for runtime linking
+	// nob_cmd_append(&lib_cmd, "-lkernel32"); // Not neccessary
+#else
+
+#endif
+
+	if (!nob_cmd_run(&lib_cmd)){
+		nob_log(NOB_ERROR, "Failed building test_dll.a");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+
+
+defer:
+	nob_cmd_free(obj_cmd);
+	nob_cmd_free(lib_cmd);
+	nob_da_free(file_list);
+	nob_temp_rewind(temp_checkpoint);
+	return result;
+}
 
 enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd){
 	enum RESULT result = SUCCESS;
@@ -501,13 +548,18 @@ enum RESULT compile_project(){
 		assert(false);
 		nob_return_defer(FAILED);
 	}
-/*
-if (compile_plug_template(force_rebuild) == FAILED){
-	nob_log(NOB_ERROR, "Failed to compile plug template.");
-	assert(false);
-	nob_return_defer(FAILED);
-}
-*/
+
+	if (compile_test_dll(force_rebuild) == FAILED){
+		nob_log(NOB_ERROR, "Failed to compile test DLL.");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+
+	// if (compile_plug_template(force_rebuild) == FAILED){
+	// 	nob_log(NOB_ERROR, "Failed to compile plug template.");
+	// 	assert(false);
+	// 	nob_return_defer(FAILED);
+	// }
 
 defer:
 	nob_temp_rewind(temp_checkpoint);
