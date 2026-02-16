@@ -47,8 +47,7 @@ static struct SavedConfig current_config = {
 static struct SavedConfig *previous_config = NULL;
 static char starting_cwd[1024] = {0};
 
-//---------------------------------------------------------------------------------
-// Raylib
+//--------------Raylib----------------------------------------------------------
 const char *get_raylib_platform(enum PLATFORM_TARGET platform){
 	switch (platform){
 		case PLATFORM_DESKTOP_GLFW: return "PLATFORM=PLATFORM_DESKTOP_GLFW";
@@ -171,8 +170,7 @@ void get_include_raylib(Nob_Cmd *cmd){
 	nob_cmd_append(cmd, "-I", RAYLIB_SRC_DIR);
 }
 
-//---------------------------------------------------------------------------------
-// Emscripten
+// TODO: -------------Emscripten--------------------------------------------------------
 enum RESULT setup_emscripten(){
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
@@ -270,8 +268,7 @@ enum RESULT setup_web(){
 defer:
 	return result;
 }
-//---------------------------------------------------------------------------------
-// Source
+//-------------Source------------------------------------------------------------
 void get_include_directories(Nob_Cmd *cmd){
 #if defined(_MSC_VER)
 	nob_cmd_append(cmd, "/I" INCLUDE_FOLDER);
@@ -280,7 +277,7 @@ void get_include_directories(Nob_Cmd *cmd){
 #endif
 }
 
-void get_defines(Nob_Cmd *cmd){
+void get_target_defines(Nob_Cmd *cmd){
 	// Apple example - https://github.com/ImplodedPotato/C-nob-raylib-template
 	// web example & hotreload - https://github.com/angelcaru/raylib-template/blob/master/nob.c
 	// reference - https://github.com/OleksiiBulba/c-nob.h-raylib-template
@@ -372,7 +369,6 @@ defer:
 	nob_temp_rewind(temp_start);
 	return result;
 }
-
 
 enum RESULT compile_test_dll(bool force_rebuild){
 	// Reference - https://web.archive.org/web/20201109103748/http://www.mingw.org/wiki/sampledll
@@ -526,7 +522,7 @@ enum RESULT compile_main(bool force_rebuild, Nob_Cmd *link_cmd){
 	bool is_shared = false;
 	
 	nob_cc_flags(&main_obj_cmd);
-	get_defines(&main_obj_cmd);
+	get_target_defines(&main_obj_cmd);
 	get_include_raylib(&main_obj_cmd);
 	get_include_directories(&main_obj_cmd);
 	nob_cmd_optimize(&main_obj_cmd, current_config.optimize);
