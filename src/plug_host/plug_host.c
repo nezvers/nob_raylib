@@ -18,12 +18,12 @@
 
 bool PlugLoad(const char *plug_path, PlugApi *plug_api) {
     // workaround to get relative *.so path
-#if !defined(__win32)
+#if !defined(_WIN32)
     // Forward declaration of the function. Didn't want to polute the top of the script.
     int PlugGetExecutableDirectory(char *buffer, size_t buffer_size);
 
     char path[1024];
-    if (GetExecutableDirectory(path, sizeof(path)) == 0) {
+    if (PlugGetExecutableDirectory(path, sizeof(path)) == 0) {
         plug_path = path;
     }
     // else, hope user gave absolute path
