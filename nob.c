@@ -439,12 +439,17 @@ enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd){
 	}
 	
 	// NOTE: Can't use temp strings
+#if defined(_MSC_VER)
+	nob_cmd_append(link_cmd, LIB_FOLDER "load_library.lib");
+	nob_cmd_append(link_cmd, "Kernel32.lib"); 
+#else
 	nob_cmd_append(link_cmd, "-L" LIB_FOLDER);
 	nob_cmd_append(link_cmd, "-lload_library");
+#endif
 
-	#if !defined(WINDOWS)
-		nob_cmd_append(link_cmd, "-ldl");
-	#endif
+#if !defined(WINDOWS)
+	nob_cmd_append(link_cmd, "-ldl");
+#endif
 
 defer:
 	nob_cmd_free(obj_cmd);
@@ -485,12 +490,17 @@ enum RESULT compile_os(bool force_rebuild, Nob_Cmd *link_cmd){
 	}
 	
 	// NOTE: Can't use temp strings
+#if defined(_MSC_VER)
+	nob_cmd_append(link_cmd, LIB_FOLDER "os.lib");
+	nob_cmd_append(link_cmd, "Kernel32.lib"); 
+#else
 	nob_cmd_append(link_cmd, "-L" LIB_FOLDER);
 	nob_cmd_append(link_cmd, "-los");
+#endif
 
-	#if !defined(WINDOWS)
-		nob_cmd_append(link_cmd, "-ldl");
-	#endif
+#if !defined(WINDOWS)
+	nob_cmd_append(link_cmd, "-ldl");
+#endif
 
 defer:
 	nob_cmd_free(obj_cmd);
@@ -537,11 +547,9 @@ enum RESULT compile_plug_host(bool force_rebuild, Nob_Cmd *link_cmd){
 #else
 	nob_cmd_append(link_cmd, "-L" LIB_FOLDER);
 	nob_cmd_append(link_cmd, "-lplug_host");
-	#if defined(WINDOWS)
-		nob_cmd_append(link_cmd, "-lkernel32");
-	#else
-		nob_cmd_append(link_cmd, "-ldl");
-	#endif
+#endif
+#if !defined(WINDOWS)
+	nob_cmd_append(link_cmd, "-ldl");
 #endif
 
 defer:
