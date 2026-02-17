@@ -11,7 +11,7 @@
 
 // REDEFINE nob_cc - https://web.archive.org/web/20160308010351/https://beefchunk.com/documentation/lang/c/pre-defined-c/precomp.html
 #undef nob_cc
-#if _WIN32
+#if defined(_WIN32)
 #	define WINDOWS
 #	if defined(__MINGW32__)
 #		define nob_cc(cmd) nob_cmd_append(cmd, "gcc")
@@ -22,6 +22,9 @@
 #	elif defined(_MSC_VER)
 #		define nob_cc(cmd) nob_cmd_append(cmd, "cl.exe")
 #	endif
+#if defined(__APPLE__)
+#   define APPLE
+#	define nob_cc(cmd) nob_cmd_append(cmd, "cc")
 #else
 #	define LINUX
 #	define nob_cc(cmd) nob_cmd_append(cmd, "cc")

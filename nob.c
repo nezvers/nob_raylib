@@ -82,6 +82,8 @@ void link_raylib(Nob_Cmd *cmd){
 	#endif
 #elif defined(LINUX)
 			nob_cmd_append(cmd, "-lm", "-ldl", "-lpthread", "-lGL", "-lX11");
+#elif defined(__APPLE__)
+			nob_cmd_append(cmd, "-framework", "CoreVideo", "-framework", "IOKit", "-framework", "Cocoa", "-framework", "GLUT", "-framework", "OpenGL");
 #endif
 			break;
 		case (PLATFORM_WEB):
