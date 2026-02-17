@@ -412,16 +412,16 @@ enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd){
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
 	Nob_File_Paths file_list = {0};
-	Nob_Cmd load_lib_obj_cmd = {0};
-	Nob_Cmd load_lib_cmd = {0};
+	Nob_Cmd obj_cmd = {0};
+	Nob_Cmd lib_cmd = {0};
 
 	bool is_shared = false;
 
 	// Object files
-	nob_cc_flags(&load_lib_obj_cmd);
-	nob_cmd_optimize(&load_lib_obj_cmd, current_config.optimize);
-	get_include_directories(&load_lib_obj_cmd);
-	if (nob_cmd_process_source_dir(&load_lib_obj_cmd, SOURCE_FOLDER "load_library/", OBJ_FOLDER "load_library/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	nob_cc_flags(&obj_cmd);
+	nob_cmd_optimize(&obj_cmd, current_config.optimize);
+	get_include_directories(&obj_cmd);
+	if (nob_cmd_process_source_dir(&obj_cmd, SOURCE_FOLDER "load_library/", OBJ_FOLDER "load_library/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
 		nob_log(NOB_ERROR, "Failed building load_library.o");
 		assert(false);
 		nob_return_defer(FAILED);
@@ -430,31 +430,71 @@ enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd){
 
 	// static lib
 	temp_checkpoint = nob_temp_save();
-	nob_cmd_new_static_library(&load_lib_cmd, "load_library", LIB_FOLDER);
-	nob_cmd_input_objects_dir(&load_lib_cmd, OBJ_FOLDER  "load_library/", &file_list);
-	if (!nob_cmd_run(&load_lib_cmd)){
+	nob_cmd_new_static_library(&lib_cmd, "load_library", LIB_FOLDER);
+	nob_cmd_input_objects_dir(&lib_cmd, OBJ_FOLDER  "load_library/", &file_list);
+	if (!nob_cmd_run(&lib_cmd)){
 		nob_log(NOB_ERROR, "Failed building load_library.a");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
 	
 	// NOTE: Can't use temp strings
-#if _MSC_VER
-	nob_cmd_append(link_cmd, LIB_FOLDER "libload_library.lib");
-	nob_cmd_append(link_cmd, "Kernel32.lib");
-#else
 	nob_cmd_append(link_cmd, "-L" LIB_FOLDER);
 	nob_cmd_append(link_cmd, "-lload_library");
-	#if defined(WINDOWS)
-		nob_cmd_append(link_cmd, "-lkernel32");
-	#else
+
+	#if !defined(WINDOWS)
 		nob_cmd_append(link_cmd, "-ldl");
 	#endif
-#endif
 
 defer:
-	nob_cmd_free(load_lib_obj_cmd);
-	nob_cmd_free(load_lib_cmd);
+	nob_cmd_free(obj_cmd);
+	nob_cmd_free(lib_cmd);
+	nob_da_free(file_list);
+	nob_temp_rewind(temp_checkpoint);
+	return result;
+}
+
+enum RESULT compile_os(bool force_rebuild, Nob_Cmd *link_cmd){
+	enum RESULT result = SUCCESS;
+	size_t temp_checkpoint = nob_temp_save();
+	Nob_File_Paths file_list = {0};
+	Nob_Cmd obj_cmd = {0};
+	Nob_Cmd lib_cmd = {0};
+
+	bool is_shared = false;
+
+	// Object files
+	nob_cc_flags(&obj_cmd);
+	nob_cmd_optimize(&obj_cmd, current_config.optimize);
+	get_include_directories(&obj_cmd);
+	if (nob_cmd_process_source_dir(&obj_cmd, SOURCE_FOLDER "os/", OBJ_FOLDER "os/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+		nob_log(NOB_ERROR, "Failed building os.o");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+	nob_temp_rewind(temp_checkpoint);
+
+	// static lib
+	temp_checkpoint = nob_temp_save();
+	nob_cmd_new_static_library(&lib_cmd, "os", LIB_FOLDER);
+	nob_cmd_input_objects_dir(&lib_cmd, OBJ_FOLDER  "os/", &file_list);
+	if (!nob_cmd_run(&lib_cmd)){
+		nob_log(NOB_ERROR, "Failed building os.a");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+	
+	// NOTE: Can't use temp strings
+	nob_cmd_append(link_cmd, "-L" LIB_FOLDER);
+	nob_cmd_append(link_cmd, "-los");
+
+	#if !defined(WINDOWS)
+		nob_cmd_append(link_cmd, "-ldl");
+	#endif
+
+defer:
+	nob_cmd_free(obj_cmd);
+	nob_cmd_free(lib_cmd);
 	nob_da_free(file_list);
 	nob_temp_rewind(temp_checkpoint);
 	return result;
@@ -559,12 +599,18 @@ defer:
 enum RESULT compile_project(){
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
-	// Append only constant commands used at the end for main executable compilation
+	// Append only constant commands. Used at the end for main executable to link static libs 
 	Nob_Cmd link_cmd = {0};
 	
 	// TODO: force_rebuild for specific modules through nob arguments
 	bool force_rebuild = false;
 	if (compile_load_library(force_rebuild, &link_cmd) == FAILED){
+		nob_log(NOB_ERROR, "Failed to compile load_library.");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+
+	if (compile_os(force_rebuild, &link_cmd) == FAILED){
 		nob_log(NOB_ERROR, "Failed to compile load_library.");
 		assert(false);
 		nob_return_defer(FAILED);

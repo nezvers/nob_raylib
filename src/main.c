@@ -1,6 +1,7 @@
 #include "raylib.h" // www.raylib.com
 #include "adjust.h" // learn about features -> https://github.com/bi3mer/adjust.h
 #include "load_library.h"
+#include "os/executable_directory.h"
 #include "plug_host.h"
 
 int main(void)
@@ -21,6 +22,12 @@ int main(void)
     test_lib_path = "test_dll.dll";
 #else
     test_lib_path = "test_dll.so";
+    char exe_dir[1024];
+    char so_path[1024];
+    if (GetExecutableDirectory(exe_dir, sizeof(exe_dir)) == 0) {
+        snprintf(so_path, sizeof(so_path), "%s/%s", exe_dir, test_lib_path);
+        test_lib_path = so_path;
+    }
 #endif
     void *test_lib = LibLoad(test_lib_path);
     if (!LibIsValid(test_lib)){
