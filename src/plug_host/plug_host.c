@@ -23,8 +23,10 @@ bool PlugLoad(const char *plug_path, PlugApi *plug_api) {
     int PlugGetExecutableDirectory(char *buffer, size_t buffer_size);
 
     char path[1024];
+    char so_path[1024];
     if (PlugGetExecutableDirectory(path, sizeof(path)) == 0) {
-        plug_path = path;
+        snprintf(so_path, sizeof(so_path), "%s/%s", path, plug_path);
+        plug_path = so_path;
     }
     // else, hope user gave absolute path
 #endif
