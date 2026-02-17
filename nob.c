@@ -148,30 +148,31 @@ enum RESULT compile_raylib(bool force_rebuild, Nob_Cmd *link_cmd){
 		nob_cmd_make(&raylib_cmd);
 		const char *raylib_platform = get_raylib_platform(current_config.platform);
 		nob_cmd_append(&raylib_cmd, raylib_platform, "-j4");
-		bool compile_success = nob_cmd_run(&raylib_cmd);
 
-		nob_log(NOB_INFO, "Changing directory: %s ", "../../../");
-		if (!nob_set_current_dir("../../../")){
-			nob_log(NOB_ERROR, "Failed to move back to root directory");
-			assert(false);
-			nob_return_defer(FAILED);
-		}
-		if (!compile_success){
+		if (!nob_cmd_run(&raylib_cmd)){
 			nob_log(NOB_ERROR, "Failed to compile raylib");
 			assert(false);
 			nob_return_defer(FAILED);
 		}
 	}
+	
+defer:
+	nob_log(NOB_INFO, "Changing directory: %s ", starting_cwd);
+	if (!nob_set_current_dir(starting_cwd)){
+		nob_log(NOB_ERROR, "Failed to move back to root directory");
+		assert(false);
+		result = FAILED;
+		goto defer_2;
+	}
 
 	if (!nob_file_exists(RAYLIB_SRC_DIR "libraylib.a")){
 		nob_log(NOB_ERROR, "libraylib.a disappeared!!!");
 		assert(false);
-		nob_return_defer(FAILED);
+		result = FAILED;
+		goto defer_2;
 	}
 
-	// link_raylib(link_cmd);
-
-defer:
+defer_2:
 	nob_temp_rewind(temp_checkpoint);
 	return result;
 }
