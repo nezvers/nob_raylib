@@ -96,7 +96,7 @@ void link_raylib(Nob_Cmd *cmd){
 	}
 }
 
-enum RESULT setup_raylib(bool force_rebuild, Nob_Cmd *link_cmd){
+enum RESULT download_raylib() {
 	enum RESULT result = SUCCESS;
 	Nob_Cmd raylib_cmd = {0};
 	size_t temp_checkpoint = nob_temp_save();
@@ -123,6 +123,16 @@ enum RESULT setup_raylib(bool force_rebuild, Nob_Cmd *link_cmd){
 			nob_return_defer(FAILED);
 		}
 	}
+
+defer:
+	nob_temp_rewind(temp_checkpoint);
+	return result;
+}
+
+enum RESULT compile_raylib(bool force_rebuild, Nob_Cmd *link_cmd){
+	enum RESULT result = SUCCESS;
+	Nob_Cmd raylib_cmd = {0};
+	size_t temp_checkpoint = nob_temp_save();
 
 	// Compile
 	bool need_rebuild = force_rebuild || (previous_config != NULL && previous_config->platform != current_config.platform);
@@ -309,7 +319,7 @@ void get_target_defines(Nob_Cmd *cmd){
 	}
 	else{
 		nob_cmd_append(cmd, "-DRELEASE");
-		// nob_cmd_append(cmd, "-DMODE_PRODUCTION"); // disable adjust.h "passive" hotreload
+		nob_cmd_append(cmd, "-DMODE_PRODUCTION"); // disable adjust.h "passive" hotreload
 		nob_cmd_append(cmd, "-D", "RESOURCES_PATH=" RESOURCES_FOLDER);
 	}
 	nob_cmd_optimize(cmd, current_config.optimize);
@@ -630,8 +640,8 @@ enum RESULT compile_project(){
 		nob_return_defer(FAILED);
 	}
 	
-	if (setup_raylib(force_rebuild, &link_cmd) == FAILED){
-		nob_log(NOB_ERROR, "Failed to setup RAYLIB.");
+	if (compile_raylib(force_rebuild, &link_cmd) == FAILED){
+		nob_log(NOB_ERROR, "Failed to compile RAYLIB.");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
@@ -739,6 +749,12 @@ int main(int argc, char **argv){
 	// TODO: move to compile project
 	if (current_config.platform == PLATFORM_WEB && setup_web() == FAILED){
 		nob_log(NOB_ERROR, "Failed to setup web.");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+
+	if (download_raylib()){
+		nob_log(NOB_ERROR, "Failed to download Raylib");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
