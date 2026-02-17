@@ -1,16 +1,17 @@
 # Raylib template with nob.h
 
 ## Features
-- All 100% C build system. Easily implement project scaling.
+- All 100% C build system (Make for Raylib itself). Easily implement project scaling.
 - Ability to debug project builder.
 - No need for Cmake to automate C project build. Unless including projects that require it.    
 - Project build automation is built on top of [nob.h](https://github.com/tsoding/nob.h) library.    
 - "Passive" hot-reload with [adjust.h](https://github.com/bi3mer/adjust.h)
 - Template supports platforms: Windows, Linux (X11). More to come.
+- `*.dll`/`*.so` compilation and loading support
     
 ## The only requirements are:    
 - C compiler (gcc, clang, mingw, msvc (in progress) )
-- `make` or `mingw32-make`    
+- `make` or `mingw32-make` (for building Raylib)    
 - `gdb` for debugging    
     
 1. Just build bootstrap `nob.c`    
@@ -32,10 +33,10 @@
 
 ## TODO
 - Add WASM builds with emscriptem
-- Add Linux Wayland support
 - Add option to fetch source files from provided directories
 - Expand nob arguments (-help, -platform, -debug, -name)
 - Add compilation linking for APPLE (not personally interested, pull requests are welcome)  
+- Add Linux Wayland support
 
 ## Supported IDE
 ### VS Code
