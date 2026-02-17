@@ -155,7 +155,7 @@ enum RESULT compile_raylib(bool force_rebuild, Nob_Cmd *link_cmd){
 			nob_return_defer(FAILED);
 		}
 	}
-	
+
 defer:
 	nob_log(NOB_INFO, "Changing directory: %s ", starting_cwd);
 	if (!nob_set_current_dir(starting_cwd)){
@@ -182,16 +182,11 @@ void get_include_raylib(Nob_Cmd *cmd){
 }
 
 // TODO: -------------Emscripten--------------------------------------------------------
-enum RESULT setup_emscripten(){
+enum RESULT download_emscripten() {
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
 	const char *emscripten_git = "https://github.com/emscripten-core/emsdk.git";
 	const char *emsdk_tar = "https://github.com/emscripten-core/emsdk/archive/refs/tags/" EMSCRIPTEN_TAG ".tar.gz";
-	// EMSCRIPTEN_TAG
-	// EMSCRIPTEN_DIR_NAME
-	// EMSCRIPTEN_SRC_DIR
-	// EMSCRIPTEN_TAR_FILE
-	// EMSCRIPTEN_ARCHIVE
 
 	// Download
 	if (!nob_file_exists(EMSCRIPTEN_ARCHIVE)){
@@ -214,6 +209,15 @@ enum RESULT setup_emscripten(){
 			nob_return_defer(FAILED);
 		}
 	}
+
+defer:
+	nob_temp_rewind(temp_checkpoint);
+	return result;
+}
+
+enum RESULT setup_emscripten(){
+	enum RESULT result = SUCCESS;
+	size_t temp_checkpoint = nob_temp_save();
 
 	if (!nob_file_exists(EMSCRIPTEN_SRC_DIR ".emscripten")){
 		nob_log(NOB_INFO, "Changing directory: %s ", EMSCRIPTEN_SRC_DIR);
@@ -748,10 +752,18 @@ int main(int argc, char **argv){
 		previous_config = &saved_config;
 	}
 	// TODO: move to compile project
-	if (current_config.platform == PLATFORM_WEB && setup_web() == FAILED){
-		nob_log(NOB_ERROR, "Failed to setup web.");
-		assert(false);
-		nob_return_defer(FAILED);
+	if (current_config.platform == PLATFORM_WEB) {
+		if (download_emscripten()){
+			nob_log(NOB_ERROR, "Failed to download Emscripten");
+			assert(false);
+			nob_return_defer(FAILED);
+		}
+
+		if (setup_web() == FAILED){
+			nob_log(NOB_ERROR, "Failed to setup web directory");
+			assert(false);
+			nob_return_defer(FAILED);
+		}
 	}
 
 	if (download_raylib()){
