@@ -178,7 +178,11 @@ defer_2:
 }
 
 void get_include_raylib(Nob_Cmd *cmd){
+#if defined(_MSC_VER)
+	nob_cmd_append(cmd, "/I" RAYLIB_SRC_DIR);
+#else
 	nob_cmd_append(cmd, "-I", RAYLIB_SRC_DIR);
+#endif
 }
 
 // TODO: -------------Emscripten--------------------------------------------------------
@@ -292,6 +296,20 @@ void get_include_directories(Nob_Cmd *cmd){
 #endif
 }
 
+void get_resource_path_define(Nob_Cmd *cmd) {
+	// TODO: add msvc support
+	if (current_config.platform == PLATFORM_WEB){
+		nob_cmd_append(cmd, "--preload-file", RESOURCES_FOLDER);
+	}
+	else if (current_config.is_debug) {
+		nob_cmd_append(cmd, "-D", "RESOURCES_PATH=../" RESOURCES_FOLDER);
+	}
+	else {
+		// TODO: for release place everything in same folder
+		nob_cmd_append(cmd, "-D", "RESOURCES_PATH=../" RESOURCES_FOLDER);
+	}
+}
+
 void get_target_defines(Nob_Cmd *cmd){
 	// Apple example - https://github.com/ImplodedPotato/C-nob-raylib-template
 	// web example & hotreload - https://github.com/angelcaru/raylib-template/blob/master/nob.c
@@ -304,11 +322,8 @@ void get_target_defines(Nob_Cmd *cmd){
 		nob_cmd_append(cmd, "-s", "WASM=1");
 		nob_cmd_append(cmd, "-s", "TOTAL_MEMORY=67108864");
 		nob_cmd_append(cmd, "-s", "FORCE_FILESYSTEM=1");
-		nob_cmd_append(cmd, "--preload-file", RESOURCES_FOLDER);
 		nob_cmd_append(cmd, "--shell-file", "../minshell.html");
-		return;
-	}
-	if (current_config.is_debug){
+	} else if (current_config.is_debug){
 		// Debug symbols
 		nob_cmd_debug(cmd);
 		nob_cmd_append(cmd, "-DDEBUG");
@@ -316,18 +331,17 @@ void get_target_defines(Nob_Cmd *cmd){
 			case (PLATFORM_DESKTOP):
 			case (PLATFORM_DESKTOP_GLFW):
 			case (PLATFORM_DESKTOP_RGFW):
-				nob_cmd_append(cmd, "-D", "RESOURCES_PATH=../" RESOURCES_FOLDER);
 				break;
 			default:
-				nob_cmd_append(cmd, "-D", "RESOURCES_PATH=../" RESOURCES_FOLDER);
+				break;
 		}
 	}
 	else{
 		nob_cmd_append(cmd, "-DRELEASE");
-		nob_cmd_append(cmd, "-DMODE_PRODUCTION"); // disable adjust.h "passive" hotreload
-		nob_cmd_append(cmd, "-D", "RESOURCES_PATH=" RESOURCES_FOLDER);
+		// nob_cmd_append(cmd, "-DMODE_PRODUCTION"); // disable adjust.h "passive" hotreload
 	}
 	nob_cmd_optimize(cmd, current_config.optimize);
+	get_resource_path_define(cmd);
 }
 
 // TODO: NOT USED
