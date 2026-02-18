@@ -22,7 +22,7 @@
 #	elif defined(_MSC_VER)
 #		define nob_cc(cmd) nob_cmd_append(cmd, "cl.exe")
 #	endif
-#if defined(__APPLE__)
+#elif defined(__APPLE__)
 #   define APPLE
 #	define nob_cc(cmd) nob_cmd_append(cmd, "cc")
 #else
