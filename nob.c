@@ -675,13 +675,13 @@ enum RESULT compile_project(){
 	}
 
 	if (compile_os(force_rebuild, &link_cmd) == FAILED){
-		nob_log(NOB_ERROR, "Failed to compile load_library.");
+		nob_log(NOB_ERROR, "Failed to compile OS.");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
 
 	if (compile_plug_host(force_rebuild, &link_cmd) == FAILED){
-		nob_log(NOB_ERROR, "Failed to compile load_library.");
+		nob_log(NOB_ERROR, "Failed to compile plug host.");
 		assert(false);
 		nob_return_defer(FAILED);
 	}
