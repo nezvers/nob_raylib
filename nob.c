@@ -375,7 +375,11 @@ enum RESULT compile_plug(bool force_rebuild, const char *source_dir, const char 
 	nob_cc_flags(&obj_cmd);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
 	get_include_directories(&obj_cmd);
-	if (nob_cmd_process_source_dir(&obj_cmd, source_dir, obj_dir, ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	enum RESULT obj_result = nob_cmd_process_source_dir(
+		&obj_cmd, source_dir, obj_dir, ".c", 
+		current_config.is_debug, is_shared, force_rebuild);
+
+	if (obj_result == FAILED){
 		nob_log(NOB_ERROR, nob_temp_sprintf( "Failed building %s.o", plug_name));
 		assert(false);
 		nob_return_defer(FAILED);
@@ -413,7 +417,11 @@ enum RESULT compile_test_dll(bool force_rebuild){
 	nob_cc_flags(&obj_cmd);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
 	get_include_directories(&obj_cmd);
-	if (nob_cmd_process_source_dir(&obj_cmd, "test_dll/", OBJ_FOLDER "test_dll/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	enum RESULT obj_result = nob_cmd_process_source_dir(
+		&obj_cmd, "test_dll/", OBJ_FOLDER "test_dll/", ".c", 
+		current_config.is_debug, is_shared, force_rebuild);
+
+	if (obj_result == FAILED){
 		nob_log(NOB_ERROR, "Failed building test_dll.o");
 		assert(false);
 		nob_return_defer(FAILED);
@@ -452,7 +460,11 @@ enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd){
 	nob_cc_flags(&obj_cmd);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
 	get_include_directories(&obj_cmd);
-	if (nob_cmd_process_source_dir(&obj_cmd, SOURCE_FOLDER "load_library/", OBJ_FOLDER "load_library/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	enum RESULT obj_result = nob_cmd_process_source_dir(
+		&obj_cmd, SOURCE_FOLDER "load_library/", OBJ_FOLDER "load_library/", ".c", 
+		current_config.is_debug, is_shared, force_rebuild);
+
+	if (obj_result == FAILED){
 		nob_log(NOB_ERROR, "Failed building load_library.o");
 		assert(false);
 		nob_return_defer(FAILED);
@@ -503,7 +515,11 @@ enum RESULT compile_os(bool force_rebuild, Nob_Cmd *link_cmd){
 	nob_cc_flags(&obj_cmd);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
 	get_include_directories(&obj_cmd);
-	if (nob_cmd_process_source_dir(&obj_cmd, SOURCE_FOLDER "os/", OBJ_FOLDER "os/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	enum RESULT obj_result = nob_cmd_process_source_dir(
+		&obj_cmd, SOURCE_FOLDER "os/", OBJ_FOLDER "os/", ".c", 
+		current_config.is_debug, is_shared, force_rebuild);
+
+	if (obj_result == FAILED){
 		nob_log(NOB_ERROR, "Failed building os.o");
 		assert(false);
 		nob_return_defer(FAILED);
@@ -554,7 +570,11 @@ enum RESULT compile_plug_host(bool force_rebuild, Nob_Cmd *link_cmd){
 	nob_cc_flags(&obj_cmd);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
 	get_include_directories(&obj_cmd);
-	if (nob_cmd_process_source_dir(&obj_cmd, SOURCE_FOLDER "plug_host/", OBJ_FOLDER "plug_host/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	enum RESULT obj_result = nob_cmd_process_source_dir(
+		&obj_cmd, SOURCE_FOLDER "plug_host/", OBJ_FOLDER "plug_host/", ".c", 
+		current_config.is_debug, is_shared, force_rebuild);
+
+	if (obj_result == FAILED){
 		nob_log(NOB_ERROR, "Failed building plug_host.o");
 		assert(false);
 		nob_return_defer(FAILED);
@@ -605,7 +625,11 @@ enum RESULT compile_main(bool force_rebuild, Nob_Cmd *link_cmd){
 	get_include_raylib(&main_obj_cmd);
 	get_include_directories(&main_obj_cmd);
 	nob_cmd_optimize(&main_obj_cmd, current_config.optimize);
-	if (nob_cmd_process_source_dir(&main_obj_cmd, SOURCE_FOLDER, OBJ_FOLDER "main/", ".c", current_config.is_debug, is_shared, force_rebuild) == FAILED){
+	enum RESULT obj_result = nob_cmd_process_source_dir(
+		&main_obj_cmd, SOURCE_FOLDER, OBJ_FOLDER "main/", ".c", 
+		current_config.is_debug, is_shared, force_rebuild);
+	
+	if (obj_result == FAILED){
 		nob_log(NOB_ERROR, "Failed building main objects");
 		assert(false);
 		nob_return_defer(FAILED);
