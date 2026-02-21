@@ -639,6 +639,7 @@ enum RESULT compile_main(bool force_rebuild, Nob_Cmd *link_cmd){
 
 	nob_cc(&main_cmd);
 	// Place inside build folder
+	// TODO: move to build/release || build/debug
 	nob_cc_output(&main_cmd, nob_temp_sprintf("%s%s", BUILD_FOLDER, project_name));
 
 	nob_cmd_input_objects_dir(&main_cmd, OBJ_FOLDER  "main/", &file_list);
