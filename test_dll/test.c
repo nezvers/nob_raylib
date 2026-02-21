@@ -3,6 +3,6 @@
 #include "test.h"
 #include <stdio.h>
 
-void print_hello(){
+void print_hello() {
     printf("Hello from DLL!!!\n");
 }

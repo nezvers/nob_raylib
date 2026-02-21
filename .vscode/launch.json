@@ -35,10 +35,10 @@
       "type": "cppdbg",
       "request": "launch",
       "windows": {
-        "program": "${workspaceFolder}/build/${config:PROJECT_NAME}.exe"
+        "program": "${workspaceFolder}/build/debug/${config:PROJECT_NAME}.exe"
       },
       "linux": {
-        "program": "${workspaceFolder}/build/${config:PROJECT_NAME}"
+        "program": "${workspaceFolder}/build/debug/${config:PROJECT_NAME}"
       },
       "args": [],
       "stopAtEntry": false,

@@ -13,21 +13,21 @@ typedef struct {
 
 static PlugState *plug_state = NULL;
 
-static void load_assets(void){
+static void load_assets(void) {
     printf("load_assets()\n");
 }
 
-static void unload_assets(void){
+static void unload_assets(void) {
     printf("unload_assets()\n");
 }
 
 /* exported */
-void reset(void){
+void reset(void) {
     printf("reset()\n");
 }
 
 /* exported */
-void init(void){
+void init(void) {
     plug_state = malloc(sizeof(*plug_state));
     assert(plug_state != NULL);
     memset(plug_state, 0, sizeof(*plug_state));
@@ -39,13 +39,13 @@ void init(void){
 }
 
 /* exported */
-void *save_state(void){
+void *save_state(void) {
     printf("save_state()\n");
     return plug_state;
 }
 
 /* exported */
-void load_state(void *state){
+void load_state(void *state) {
     plug_state = state;
     if (plug_state->size < sizeof(*plug_state)) {
         //TraceLog(LOG_INFO, "Migrating plug state schema %zu bytes -> %zu bytes", p->size, sizeof(*p));
@@ -57,7 +57,7 @@ void load_state(void *state){
 }
 
 /* exported */
-void free_state(void){
+void free_state(void) {
     printf("free_state()\n");
     unload_assets();
     
@@ -65,7 +65,7 @@ void free_state(void){
 }
 
 /* exported */
-void update(void *data){
+void update(void *data) {
     (void)data;
     printf("update()\n");
 }

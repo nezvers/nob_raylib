@@ -771,23 +771,23 @@ static inline void *_adjust_register_and_get(const _ADJUST_TYPE type, void *val,
 }
 
 #define ADJUST_BOOL(v)                                                         \
-    (*((bool *)_adjust_register_and_get(_ADJUST_BOOL, &(bool){v}, __FILE__,    \
+    (*((bool *)_adjust_register_and_get(_ADJUST_BOOL, &(bool) {v}, __FILE__,    \
                                         __LINE__)))
 
 #define ADJUST_CHAR(v)                                                         \
-    (*((char *)_adjust_register_and_get(_ADJUST_CHAR, &(char){v}, __FILE__,    \
+    (*((char *)_adjust_register_and_get(_ADJUST_CHAR, &(char) {v}, __FILE__,    \
                                         __LINE__)))
 
 #define ADJUST_INT(v)                                                          \
-    (*((int *)_adjust_register_and_get(_ADJUST_INT, &(int){v}, __FILE__,       \
+    (*((int *)_adjust_register_and_get(_ADJUST_INT, &(int) {v}, __FILE__,       \
                                        __LINE__)))
 
 #define ADJUST_FLOAT(v)                                                        \
-    (*((float *)_adjust_register_and_get(_ADJUST_FLOAT, &(float){v}, __FILE__, \
+    (*((float *)_adjust_register_and_get(_ADJUST_FLOAT, &(float) {v}, __FILE__, \
                                          __LINE__)))
 
 #define ADJUST_STRING(v)                                                       \
-    (*((char **)_adjust_register_and_get(_ADJUST_STRING, &(char[]){v},         \
+    (*((char **)_adjust_register_and_get(_ADJUST_STRING, &(char[]) {v},         \
                                          __FILE__, __LINE__)))
 
 /* init, update, and cleanup*/

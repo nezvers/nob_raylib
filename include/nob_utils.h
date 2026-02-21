@@ -61,15 +61,15 @@ struct SavedConfig {
 	bool enable_wayland;
 };
 
-void swap_dir_slashes(char *dir_path, int length){
-	for (int i = 0; i < length; ++i){
+void swap_dir_slashes(char *dir_path, int length) {
+	for (int i = 0; i < length; ++i) {
 		if (dir_path[i] == '\0') break;
 		if (dir_path[i] == '/') dir_path[i] = '\\';
 		else if (dir_path[i] == '\\') dir_path[i] = '/';
 	}
 }
 
-enum RESULT delete_directory(const char *dir_path){
+enum RESULT delete_directory(const char *dir_path) {
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
 #if defined(WINDOWS)
@@ -77,7 +77,7 @@ enum RESULT delete_directory(const char *dir_path){
 	snprintf(dir_buffer, sizeof(dir_buffer) / sizeof(dir_buffer[0]), "%s", dir_path);
 	swap_dir_slashes(dir_buffer, sizeof(dir_buffer) / sizeof(dir_buffer[0]));
 	// explicitly call from cmd.exe otherwise gives error
-	if (system(nob_temp_sprintf("cmd.exe /c \"rmdir /s /q %s \"", dir_buffer)) == FAILED){
+	if (system(nob_temp_sprintf("cmd.exe /c \"rmdir /s /q %s \"", dir_buffer)) == FAILED) {
 		nob_log(NOB_ERROR, "Failed to delete a directory: %s", dir_path);
 		assert(false);
 		nob_return_defer(FAILED);
@@ -85,7 +85,7 @@ enum RESULT delete_directory(const char *dir_path){
 #elif defined(LINUX)
 	Nob_Cmd rm_cmd = {0};
 	nob_cmd_append(&rm_cmd, "rm", "-rf", dir_path, "||", "true");
-	if (!nob_cmd_run(&rm_cmd)){
+	if (!nob_cmd_run(&rm_cmd)) {
 		nob_log(NOB_ERROR, "Failed to delete a directory: %s", dir_path);
 		assert(false);
 		nob_return_defer(FAILED);
@@ -96,7 +96,7 @@ defer:
 	return result;
 }
 
-enum RESULT nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, const char *extension){
+enum RESULT nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, const char *extension) {
 	enum RESULT result = SUCCESS;
 	Nob_File_Type type = nob_get_file_type(dir_path);
 	if (type < 0) nob_return_defer(FAILED);
@@ -105,11 +105,11 @@ enum RESULT nob_fetch_files(const char *dir_path, Nob_File_Paths *file_list, con
 	Nob_File_Paths children = {0};
 	if (!nob_read_entire_dir(dir_path, &children)) nob_return_defer(FAILED);
 	
-	for (size_t i = 0; i < children.count; ++i){
-		if (extension == NULL){
+	for (size_t i = 0; i < children.count; ++i) {
+		if (extension == NULL) {
 			nob_da_append(file_list, children.items[i]);
 		}
-		else if (nob_sv_end_with(nob_sv_from_cstr(children.items[i]), extension)){
+		else if (nob_sv_end_with(nob_sv_from_cstr(children.items[i]), extension)) {
 			nob_da_append(file_list, children.items[i]);
 		}
 	}
@@ -119,38 +119,38 @@ defer:
 	return result;
 }
 
-Nob_String_View get_file_name_no_extension(const char *file_path){
+Nob_String_View get_file_name_no_extension(const char *file_path) {
 	Nob_String_View sv = nob_sv_from_cstr(file_path);
 	unsigned int last_slash = 0;
 	unsigned int last_dot = 0;
-	for (unsigned i = 0; i < sv.count; ++i){
+	for (unsigned i = 0; i < sv.count; ++i) {
 		if (file_path[i] == '/') last_slash = i;
 		else if (file_path[i] == '\\') last_slash = i;
 		else if (file_path[i] == '.') last_dot = i;
 	}
 
 	sv.data = file_path + last_slash;
-	if (last_dot > last_slash){
+	if (last_dot > last_slash) {
 		sv.count = last_dot - last_slash;
 	}
 	return sv;
 }
 
 // from/the/path/to/file -> from/the/path/to/
-void get_directory_path(char *buff, size_t size, const char *path){
+void get_directory_path(char *buff, size_t size, const char *path) {
 	unsigned int last_slash = 0;
-	for (int i = 0; i < size; ++i){
+	for (int i = 0; i < size; ++i) {
 		if (path[i] == '\0') break;
 		else if (path[i] == '/') last_slash = i;
 		else if (path[i] == '\\') last_slash = i;
 	}
-	for (int i = 0; i < last_slash +1; ++i){
+	for (int i = 0; i < last_slash +1; ++i) {
 		buff[i] = path[i];
 	}
 	printf("%s", buff);
 }
 
-char *nob_temp_cstr_from_string_view(Nob_String_View *sv){
+char *nob_temp_cstr_from_string_view(Nob_String_View *sv) {
 	char *result = (char*)nob_temp_alloc(sv->count + 1);
 	if (result == NULL) return result;
 	memcpy(result, sv->data, sv->count);
@@ -159,14 +159,14 @@ char *nob_temp_cstr_from_string_view(Nob_String_View *sv){
 }
 
 // Store cstring persistently and get pointer to stored cstr
-const char *nob_sb_store_cstr(Nob_String_Builder *sb, const char *cstr){
+const char *nob_sb_store_cstr(Nob_String_Builder *sb, const char *cstr) {
 	int start_i = sb->count;
 	nob_sb_append_cstr(sb, cstr);
 	nob_sb_append_null(sb);
 	return &sb->items[start_i];
 }
 
-void nob_cmd_make(Nob_Cmd *cmd){
+void nob_cmd_make(Nob_Cmd *cmd) {
 #if defined(__MINGW32__)
 	nob_cmd_append(cmd, "mingw32-make");
 #else
@@ -174,7 +174,7 @@ void nob_cmd_make(Nob_Cmd *cmd){
 #endif
 }
 
-void nob_cmd_debug(Nob_Cmd *cmd){
+void nob_cmd_debug(Nob_Cmd *cmd) {
 #if _MSC_VER
 	nob_cmd_append(cmd, "/Zi", "/MDd");
 #else
@@ -182,7 +182,7 @@ void nob_cmd_debug(Nob_Cmd *cmd){
 #endif
 }
 
-void nob_cmd_link_lib(Nob_Cmd *cmd, const char *dir_path, const char *lib_name){
+void nob_cmd_link_lib(Nob_Cmd *cmd, const char *dir_path, const char *lib_name) {
 	// TODO: make it usable for general use. MSVC use Capital first letter for windows libs
 #if _MSC_VER
 	char path_buf[1024] = {0};
@@ -191,7 +191,7 @@ void nob_cmd_link_lib(Nob_Cmd *cmd, const char *dir_path, const char *lib_name){
 	const char *lib_path = nob_temp_sprintf("%s%s.lib", dir_path, lib_name);
 	nob_cmd_append(cmd, lib_path);
 #else
-	if (dir_path != NULL){
+	if (dir_path != NULL) {
 		nob_cmd_append(cmd, "-L", dir_path);
 	}
 	const char *lib_path = nob_temp_sprintf("-l:lib%s.a", lib_name);
@@ -199,9 +199,9 @@ void nob_cmd_link_lib(Nob_Cmd *cmd, const char *dir_path, const char *lib_name){
 #endif
 }
 
-void nob_cmd_optimize(Nob_Cmd *cmd, enum OPTIMIZATION_OPTION option){
+void nob_cmd_optimize(Nob_Cmd *cmd, enum OPTIMIZATION_OPTION option) {
 #if _MSC_VER
-	switch (option){
+	switch (option) {
 		case OPTIMIZATION_NONE:
 			nob_cmd_append(cmd, "/Od");
 			break;
@@ -223,7 +223,7 @@ void nob_cmd_optimize(Nob_Cmd *cmd, enum OPTIMIZATION_OPTION option){
 			break;
 	}
 #else
-	switch (option){
+	switch (option) {
 		case OPTIMIZATION_NONE:
 			nob_cmd_append(cmd, "-O0");
 			break;
@@ -246,7 +246,7 @@ void nob_cmd_optimize(Nob_Cmd *cmd, enum OPTIMIZATION_OPTION option){
 #endif
 }
 
-void nob_cmd_output_shared_object(Nob_Cmd *cmd, const char *src_path, const char *bin_path, bool debug){
+void nob_cmd_output_shared_object(Nob_Cmd *cmd, const char *src_path, const char *bin_path, bool debug) {
 #if defined(_MSC_VER)
 	// TODO: add missing MSVC flags
 #else
@@ -257,7 +257,7 @@ void nob_cmd_output_shared_object(Nob_Cmd *cmd, const char *src_path, const char
 #endif
 }
 
-void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *out_dir, bool debug){
+void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *out_dir, bool debug) {
 	// size_t temp_checkpoint = nob_temp_save();
 #if defined(_MSC_VER)
 	// TODO: add missing MSVC flags
@@ -281,7 +281,7 @@ void nob_cmd_output_shared_library(Nob_Cmd *cmd, const char *name, const char *o
 	// nob_temp_rewind(temp_checkpoint);
 }
 
-void nob_cmd_new_static_library(Nob_Cmd *cmd, const char *name, const char *dir_path){
+void nob_cmd_new_static_library(Nob_Cmd *cmd, const char *name, const char *dir_path) {
 	// TODO: use dedicated buffer to hold output cstring (Nob_String_Builder?)
 #if defined(_MSC_VER)
 	// TODO: add correct MSVC flags
@@ -298,22 +298,22 @@ void nob_cmd_new_static_library(Nob_Cmd *cmd, const char *name, const char *dir_
 #endif
 }
 
-void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source){
-	for (int i = 0; i < source->count; ++i){
+void nob_cmd_append_cmd(Nob_Cmd *target, Nob_Cmd *source) {
+	for (int i = 0; i < source->count; ++i) {
 		const char *item = source->items[i];
 		nob_cmd_append(target, item);
 	}
 }
 
-enum RESULT nob_cmd_input_objects_dir(Nob_Cmd *cmd, const char *obj_dir, Nob_File_Paths *file_list){
+enum RESULT nob_cmd_input_objects_dir(Nob_Cmd *cmd, const char *obj_dir, Nob_File_Paths *file_list) {
 	enum RESULT result = SUCCESS;
-	if (nob_fetch_files(obj_dir, file_list, ".o") == FAILED){
+	if (nob_fetch_files(obj_dir, file_list, ".o") == FAILED) {
 		assert(false);
 		nob_return_defer(FAILED);
 	}
 	const char *file_path;
 	const char *file_name;
-	for (int i = 0; i < file_list->count; ++i){
+	for (int i = 0; i < file_list->count; ++i) {
 		file_name = file_list->items[i];
 		file_path = nob_temp_sprintf("%s%s", obj_dir, file_name);
 		nob_cc_inputs(cmd, file_path);
@@ -322,7 +322,7 @@ defer:
 	return result;
 }
 
-enum RESULT nob_cmd_process_source_dir(Nob_Cmd *item_cmd, const char *source_dir, const char *output_dir, const char *src_extension, bool debug, bool shared, bool force_rebuild){
+enum RESULT nob_cmd_process_source_dir(Nob_Cmd *item_cmd, const char *source_dir, const char *output_dir, const char *src_extension, bool debug, bool shared, bool force_rebuild) {
 	enum RESULT result = SUCCESS;
 	Nob_Cmd obj_cmd = {0};
 	Nob_Procs procs = {0};
@@ -331,7 +331,7 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *item_cmd, const char *source_dir
 	size_t temp_checkpoint = nob_temp_save();
 	if (!nob_mkdir_if_not_exists(output_dir)) nob_return_defer(FAILED);
 
-	if (nob_fetch_files(source_dir, &file_list, src_extension) == FAILED){
+	if (nob_fetch_files(source_dir, &file_list, src_extension) == FAILED) {
 		assert(false);
 		nob_return_defer(FAILED);
 	}
@@ -340,13 +340,13 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *item_cmd, const char *source_dir
 	const char *src_file_path;
 	const char *bin_path;
 	Nob_String_View src_file;
-	for (int i = 0; i < file_list.count; ++i){
+	for (int i = 0; i < file_list.count; ++i) {
 		src_file = get_file_name_no_extension(file_list.items[i]);
 		src_name = nob_temp_cstr_from_string_view(&src_file);
 		src_file_path = nob_temp_sprintf("%s%s%s", source_dir, src_name, src_extension);
 		// TODO: Add MSVC obj
 		bin_path = nob_temp_sprintf("%s%s.o", output_dir, src_name);
-		if (bin_path == NULL){
+		if (bin_path == NULL) {
 			nob_log(NOB_ERROR, "Failed to allocate binary file path cstr: %s", nob_temp_sprintf("%s%s.o", output_dir, src_name));
 			assert(false);
 			nob_return_defer(FAILED);
@@ -363,7 +363,7 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *item_cmd, const char *source_dir
 		if (shared) nob_cmd_append(&obj_cmd, "-fpic");
 		if (debug) nob_cmd_append(&obj_cmd, "-g");
 		nob_cmd_append_cmd(&obj_cmd, item_cmd);
-		if (!nob_cmd_run(&obj_cmd, .async = &procs)){
+		if (!nob_cmd_run(&obj_cmd, .async = &procs)) {
 			nob_log(NOB_ERROR, "Appending build to queue failed: %s%s%s -> %s%s%s", source_dir, src_name, src_extension, output_dir, src_name, src_extension);
 			assert(false);
 			nob_return_defer(FAILED);
@@ -372,7 +372,7 @@ enum RESULT nob_cmd_process_source_dir(Nob_Cmd *item_cmd, const char *source_dir
 	}
 
 	// Wait on all the async processes to finish and reset procs dynamic array to 0
-	if (!nob_procs_flush(&procs)){
+	if (!nob_procs_flush(&procs)) {
 		nob_log(NOB_ERROR, "Parallel source build failed dir: %s -> %s", source_dir, output_dir);
 		assert(false);
 		nob_return_defer(FAILED);
@@ -386,7 +386,7 @@ defer:
 	return result;
 }
 
-enum RESULT save_binary(const void *buffer, size_t size, const char *file_path, int bin_version){
+enum RESULT save_binary(const void *buffer, size_t size, const char *file_path, int bin_version) {
 	enum RESULT result = SUCCESS;
 	FILE *file = fopen(file_path, "wb");
     if (!file) {
@@ -395,13 +395,13 @@ enum RESULT save_binary(const void *buffer, size_t size, const char *file_path, 
         nob_return_defer(FAILED);
     }
 
-	if (fwrite(&bin_version, sizeof(bin_version), 1, file) == 0){
+	if (fwrite(&bin_version, sizeof(bin_version), 1, file) == 0) {
         nob_log(NOB_ERROR, "Couldn't save file bin version: %s ", file_path);
 		assert(false);
     	nob_return_defer(FAILED);
 	}
 
-	if (fwrite(buffer, size, 1, file) == 0){
+	if (fwrite(buffer, size, 1, file) == 0) {
         nob_log(NOB_ERROR, "Couldn't save file: %s ", file_path);
 		assert(false);
    		nob_return_defer(FAILED);
@@ -413,10 +413,10 @@ defer:
 	return result;
 }
 
-enum RESULT load_binary(void *buffer, size_t size, const char *file_path, int bin_version){
+enum RESULT load_binary(void *buffer, size_t size, const char *file_path, int bin_version) {
 	enum RESULT result = SUCCESS;
 	FILE *file = NULL;
-	if (!nob_file_exists(file_path)){
+	if (!nob_file_exists(file_path)) {
 		nob_log(NOB_INFO, "File to load doesn't exist: %s", file_path);
 		nob_return_defer(FAILED);
 	}
@@ -428,19 +428,19 @@ enum RESULT load_binary(void *buffer, size_t size, const char *file_path, int bi
     }
 	
 	int saved_version;
-	if (fread(&saved_version, sizeof(saved_version), 1, file) == 0){
+	if (fread(&saved_version, sizeof(saved_version), 1, file) == 0) {
 		nob_log(NOB_ERROR, "Couldn't load file bin version: %s ", file_path);
 		assert(false);
     	nob_return_defer(FAILED);
 	}
 
-	if (saved_version != bin_version){
+	if (saved_version != bin_version) {
 		nob_log(NOB_INFO, "File bin version missmatch (skip loading): %s (%d != %d)", file_path, saved_version, bin_version);
 		assert(false);
     	nob_return_defer(FAILED);
 	}
 
-	if (fread(buffer, size, 1, file) == 0){
+	if (fread(buffer, size, 1, file) == 0) {
 		nob_log(NOB_ERROR, "Couldn't load file: %s ", file_path);
 		assert(false);
     	nob_return_defer(FAILED);
@@ -470,12 +470,12 @@ defer:
 	return result;
 }
 
-enum RESULT extract_tar_archive(const char *archive_path, const char *target_dir, unsigned int strip_lvl){
+enum RESULT extract_tar_archive(const char *archive_path, const char *target_dir, unsigned int strip_lvl) {
 	enum RESULT result = SUCCESS;
 	char tar_cmd[2048] = {0};
 	snprintf(tar_cmd, sizeof(tar_cmd), "tar -xzf \"%s\" -C \"%s\" --strip-components=%d", archive_path, target_dir, strip_lvl);
 
-	if (system(tar_cmd) != 0){
+	if (system(tar_cmd) != 0) {
 		nob_log(NOB_ERROR, "Failed to extract: %s -> %s\nCMD: %s", archive_path, target_dir, tar_cmd);
 		assert(false);
 		nob_return_defer(FAILED);
@@ -484,13 +484,13 @@ defer:
 	return result;
 }
 
-enum RESULT extract_zip_archive(const char *archive_path, const char *target_dir, unsigned int strip_lvl){
+enum RESULT extract_zip_archive(const char *archive_path, const char *target_dir, unsigned int strip_lvl) {
 	enum RESULT result = SUCCESS;
 	char zip_cmd[2048] = {0};
 	// snprintf(zip_cmd, sizeof(zip_cmd), "powershell -command \"Expand-Archive -Force '%s' '%s'", archive_path, target_dir);
 	snprintf(zip_cmd, sizeof(zip_cmd), "tar -xf \"%s\" -C \"%s\" --strip-components=%d", archive_path, target_dir, strip_lvl);
 
-	if (system(zip_cmd)){
+	if (system(zip_cmd)) {
 		nob_log(NOB_ERROR, "Failed to extract: %s -> %s\nCMD: %s", archive_path, target_dir, zip_cmd);
 		assert(false);
 		nob_return_defer(FAILED);
@@ -499,7 +499,7 @@ defer:
 	return result;
 }
 
-enum RESULT git_clone(const char *git_repo, const char *tag, unsigned int depth, bool recursive, bool single_branch){
+enum RESULT git_clone(const char *git_repo, const char *tag, unsigned int depth, bool recursive, bool single_branch) {
 	size_t temp_checkpoint = nob_temp_save();
 	enum RESULT result = SUCCESS;
     Nob_Cmd git_cmd = {0};
@@ -509,7 +509,7 @@ enum RESULT git_clone(const char *git_repo, const char *tag, unsigned int depth,
     if (tag != NULL) nob_cmd_append(&git_cmd, "--branch", nob_temp_sprintf("%s", tag));
     if (depth != 0) nob_cmd_append(&git_cmd, "--depth", nob_temp_sprintf("%d", depth));
     nob_cmd_append(&git_cmd, git_repo);
-    if (!nob_cmd_run(&git_cmd)){
+    if (!nob_cmd_run(&git_cmd)) {
 		assert(false);
 		nob_return_defer(FAILED);
 	}

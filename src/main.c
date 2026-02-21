@@ -66,7 +66,7 @@ void test_dll() {
     }
 #endif
     void *test_lib = LibLoad(test_lib_path);
-    if (!LibIsValid(test_lib)){
+    if (!LibIsValid(test_lib)) {
         printf("Failed to load test_dll.dll\n");
     }
     else{

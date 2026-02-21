@@ -300,7 +300,7 @@ typedef struct {
 
 NOBDEF bool nob_walk_dir_opt(const char *root, Nob_Walk_Func func, Nob_Walk_Dir_Opt);
 
-#define nob_walk_dir(root, func, ...) nob_walk_dir_opt((root), (func), (Nob_Walk_Dir_Opt){__VA_ARGS__})
+#define nob_walk_dir(root, func, ...) nob_walk_dir_opt((root), (func), (Nob_Walk_Dir_Opt) {__VA_ARGS__})
 
 typedef struct {
     char *name;
@@ -606,7 +606,7 @@ NOBDEF uint64_t nob_nanos_since_unspecified_epoch(void);
 
 // Same as nob_cmd_run_opt but using cool variadic macro to set the default options.
 // See https://x.com/vkrajacic/status/1749816169736073295 for more info on how to use such macros.
-#define nob_cmd_run(cmd, ...) nob_cmd_run_opt((cmd), (Nob_Cmd_Opt){__VA_ARGS__})
+#define nob_cmd_run(cmd, ...) nob_cmd_run_opt((cmd), (Nob_Cmd_Opt) {__VA_ARGS__})
 
 // DEPRECATED:
 //
@@ -645,7 +645,7 @@ NOBDEF void nob_cmd_render(Nob_Cmd cmd, Nob_String_Builder *render);
 
 NOBDEF void nob__cmd_append(Nob_Cmd *cmd, size_t n, ...);
 #define nob_cmd_append(cmd, ...) \
-    nob__cmd_append(cmd, (sizeof((const char*[]){__VA_ARGS__})/sizeof(const char*)), __VA_ARGS__)
+    nob__cmd_append(cmd, (sizeof((const char*[]) {__VA_ARGS__})/sizeof(const char*)), __VA_ARGS__)
 
 // TODO: nob_cmd_extend() evaluates other_cmd twice
 // It can be fixed by turning nob_cmd_extend() call into a statement.

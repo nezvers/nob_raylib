@@ -5,7 +5,7 @@
       "label": "delete build",
       "type": "shell",
       "windows": {
-        "command": "if exist .\\build\\${config:PROJECT_NAME}.exe del /F /Q .\\build\\${config:PROJECT_NAME}.exe",
+        "command": "if exist .\\build\\debug\\${config:PROJECT_NAME}.exe del /F /Q .\\build\\debug\\${config:PROJECT_NAME}.exe",
         "options": {
           "shell": {
             "executable": "cmd.exe",
@@ -14,7 +14,7 @@
         }
       },
       "linux": {
-        "command": "rm -f ./build/${config:PROJECT_NAME}",
+        "command": "rm -f ./build/debug/${config:PROJECT_NAME}",
         "options": {
           "shell": {
             "executable": "/bin/bash",

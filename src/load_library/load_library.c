@@ -11,7 +11,7 @@
 #endif
 
 // Get library. Give relative file name (win:*.dll, lin: *.so )
-void* LibLoad(const char *lib_name){
+void* LibLoad(const char *lib_name) {
 #ifdef _WIN32
     return (void *)LoadLibraryA(lib_name);
 #else
@@ -21,7 +21,7 @@ void* LibLoad(const char *lib_name){
 }
 
 // Get pointer to available symbol inside library (function, variable)
-void* LibGetSymbol(void *lib_ptr, const char *symbol_name){
+void* LibGetSymbol(void *lib_ptr, const char *symbol_name) {
     if (lib_ptr == NULL) return NULL;
 #ifdef _WIN32
     return (void *)GetProcAddress((HMODULE)lib_ptr, symbol_name);
@@ -31,12 +31,12 @@ void* LibGetSymbol(void *lib_ptr, const char *symbol_name){
 }
 
 // Check if returned pointer is valid
-bool LibIsValid(void *lib_ptr){
+bool LibIsValid(void *lib_ptr) {
     return lib_ptr != NULL;
 }
 
 // Unload library
-void LibUnload(void *lib_ptr){
+void LibUnload(void *lib_ptr) {
     if (lib_ptr == NULL) return;
 #ifdef _WIN32
     FreeLibrary((HMODULE)lib_ptr);
@@ -46,7 +46,7 @@ void LibUnload(void *lib_ptr){
 }
 
 // Get last error
-const char* LibError(void){
+const char* LibError(void) {
 #ifdef _WIN32
     static char buf[512];
     DWORD err = GetLastError();
