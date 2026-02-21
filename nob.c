@@ -691,20 +691,8 @@ defer:
 	return result;
 }
 
-int main(int argc, char **argv){
-	NOB_GO_REBUILD_URSELF(argc, argv);
+enum RESULT process_cli(int argc, char **argv) {
 	enum RESULT result = SUCCESS;
-	size_t temp_checkpoint = nob_temp_save();
-	char root_dir[1024] = {0};
-	snprintf(starting_cwd, sizeof(starting_cwd), "%s", nob_get_current_dir_temp());
-	nob_temp_rewind(temp_checkpoint);
-
-	// Set CWD to the project's root directory
-	const char *program_path = nob_shift(argv, argc);
-	get_directory_path(root_dir, sizeof(root_dir), program_path);
-	if (!nob_set_current_dir(root_dir)){
-		nob_return_defer(FAILED);
-	}
 
 	// CLI
 	while (argc > 0){
@@ -757,6 +745,31 @@ int main(int argc, char **argv){
 		}
 	}
 
+defer:
+	return result;
+}
+
+int main(int argc, char **argv){
+	NOB_GO_REBUILD_URSELF(argc, argv);
+	enum RESULT result = SUCCESS;
+	size_t temp_checkpoint = nob_temp_save();
+	char root_dir[1024] = {0};
+	snprintf(starting_cwd, sizeof(starting_cwd), "%s", nob_get_current_dir_temp());
+	nob_temp_rewind(temp_checkpoint);
+
+	// Set CWD to the project's root directory
+	const char *program_path = nob_shift(argv, argc);
+	get_directory_path(root_dir, sizeof(root_dir), program_path);
+	if (!nob_set_current_dir(root_dir)){
+		nob_return_defer(FAILED);
+	}
+
+	if (process_cli(argc, argv) == FAILED) {
+		nob_log(NOB_ERROR, "Failed to process CLI arguments");
+		assert(false);
+		nob_return_defer(FAILED);
+	}
+
 	if (!nob_mkdir_if_not_exists(DOWNLOAD_FOLDER)) nob_return_defer(FAILED);
 	if (!nob_mkdir_if_not_exists(DEPENDENCY_FOLDER)) nob_return_defer(FAILED);
 	if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) nob_return_defer(FAILED);
@@ -767,7 +780,7 @@ int main(int argc, char **argv){
 	if (load_binary(&saved_config, sizeof(saved_config), BUILD_FOLDER CONFIG_FILE_NAME, config_version) == 0){
 		previous_config = &saved_config;
 	}
-	// TODO: move to compile project
+	
 	if (current_config.platform == PLATFORM_WEB) {
 		if (download_emscripten()){
 			nob_log(NOB_ERROR, "Failed to download Emscripten");
