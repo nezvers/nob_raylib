@@ -183,14 +183,6 @@ defer_2:
 	return result;
 }
 
-void get_include_raylib(Nob_Cmd *cmd) {
-#if defined(_MSC_VER)
-	nob_cmd_append(cmd, "/I" RAYLIB_SRC_DIR);
-#else
-	nob_cmd_append(cmd, "-I", RAYLIB_SRC_DIR);
-#endif
-}
-
 // TODO: -------------Emscripten--------------------------------------------------------
 enum RESULT download_emscripten() {
 	enum RESULT result = SUCCESS;
