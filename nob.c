@@ -64,8 +64,10 @@ const char *get_raylib_platform(enum PLATFORM_TARGET platform) {
 
 void link_raylib(Nob_Cmd *cmd) {
 #if defined(_MSC_VER)
-	// TODO: fix reverse directory slash
-	nob_cmd_append(cmd, RAYLIB_SRC_DIR, "raylib.lib");
+	char path_buf[1024] = {0};
+	snprintf(path_buf, sizeof(path_buf), "%s", RAYLIB_SRC_DIR);
+	swap_dir_slashes(path_buf, sizeof(path_buf));
+    nob_cmd_append(cmd, nob_temp_sprintf("%sraylib.lib", path_buf));
 #else
 	nob_cmd_append(cmd, "-L", RAYLIB_SRC_DIR, "-lraylib");
 #endif
@@ -630,7 +632,7 @@ enum RESULT compile_main(bool force_rebuild, Nob_Cmd *link_cmd) {
 	
 	nob_cc_flags(&obj_cmd);
 	get_target_defines(&obj_cmd);
-	get_include_raylib(&obj_cmd);
+	nob_cmd_include_direction(&obj_cmd, RAYLIB_SRC_DIR);
 	nob_cmd_include_direction(&obj_cmd, INCLUDE_FOLDER);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
 	nob_cmd_error(&obj_cmd, current_config.error);

@@ -316,7 +316,10 @@ void nob_cmd_error(Nob_Cmd *cmd, enum ERROR_OPTION level) {
 
 void nob_cmd_include_direction(Nob_Cmd *cmd, const char *include_path) {
 #if _MSC_VER
-    nob_cmd_append(cmd, nob_temp_sprintf("/I%s", include_path));
+	char path_buf[1024] = {0};
+	snprintf(path_buf, sizeof(path_buf), "%s", include_path);
+	swap_dir_slashes(path_buf, sizeof(path_buf));
+    nob_cmd_append(cmd, nob_temp_sprintf("/I%s", path_buf));
 #else
     nob_cmd_append(cmd, nob_temp_sprintf("-I%s", include_path));
 #endif
