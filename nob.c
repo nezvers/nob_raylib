@@ -363,20 +363,6 @@ defer:
 	return result;
 }
 
-// TODO: NOT USED
-void link_platform(Nob_Cmd *cmd) {
-	if (current_config.platform == PLATFORM_WEB) {
-
-	}
-	else{
-#if defined(WINDOWS)
-	nob_cmd_append(cmd, "-lwinmm", "-lgdi32", "-lole32");
-#elif defined(LINUX)
-	nob_cmd_append(cmd, "-lm", "-ldl", "-flto=auto", "-lpthread");
-#endif
-	}
-}
-
 enum RESULT compile_plug(bool force_rebuild, const char *source_dir, const char *plug_name) {
 	// Reference - https://web.archive.org/web/20201109103748/http://www.mingw.org/wiki/sampledll
 	enum RESULT result = SUCCESS;
