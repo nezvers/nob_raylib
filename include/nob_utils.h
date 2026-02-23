@@ -54,9 +54,19 @@ enum OPTIMIZATION_OPTION {
 	OPTIMIZATION_AGGRESSIVE,  // -Oz
 };
 
+enum ERROR_OPTION {
+    ERROR_OPTION_AS_ERRORS,    // Treat warnings as errors
+    ERROR_OPTION_NONE,        // No warnings
+    ERROR_OPTION_DEFAULT,     // Compiler default warnings
+    ERROR_OPTION_NORMAL,      // Reasonable warnings
+    ERROR_OPTION_STRICT,      // High warning level
+    ERROR_OPTION_PEDANTIC,    // Very strict / standard enforcement
+};
+
 struct SavedConfig {
 	bool is_debug;
 	enum OPTIMIZATION_OPTION optimize;
+	enum ERROR_OPTION error;
 	enum PLATFORM_TARGET platform;
 	bool enable_wayland;
 };
@@ -243,6 +253,64 @@ void nob_cmd_optimize(Nob_Cmd *cmd, enum OPTIMIZATION_OPTION option) {
 			nob_cmd_append(cmd, "-Ofast", "-march=native");
 			break;
 	}
+#endif
+}
+
+void nob_cmd_error(Nob_Cmd *cmd, enum ERROR_OPTION level) {
+#if _MSC_VER
+    switch (level) {
+        case ERROR_OPTION_AS_ERRORS:
+            nob_cmd_append(cmd, "/W4", "/WX");  // Treat warnings as errors
+            break;
+
+        case ERROR_OPTION_NONE:
+            nob_cmd_append(cmd, "/W0");
+            break;
+
+        case ERROR_OPTION_DEFAULT:
+            // MSVC default is usually /W3
+            nob_cmd_append(cmd, "/W3");
+            break;
+
+        case ERROR_OPTION_NORMAL:
+            nob_cmd_append(cmd, "/W3");
+            break;
+
+        case ERROR_OPTION_STRICT:
+            nob_cmd_append(cmd, "/W4");
+            break;
+
+        case ERROR_OPTION_PEDANTIC:
+            nob_cmd_append(cmd, "/W4", "/permissive-");
+            break;
+    }
+
+#else
+    switch (level) {
+        case ERROR_OPTION_AS_ERRORS:
+            nob_cmd_append(cmd, "-Wall", "-Wextra", "-Werror");
+            break;
+
+        case ERROR_OPTION_NONE:
+            nob_cmd_append(cmd, "-w");
+            break;
+
+        case ERROR_OPTION_DEFAULT:
+            // GCC/Clang default warning level
+            break;
+
+        case ERROR_OPTION_NORMAL:
+            nob_cmd_append(cmd, "-Wall");
+            break;
+
+        case ERROR_OPTION_STRICT:
+            nob_cmd_append(cmd, "-Wall", "-Wextra");
+            break;
+
+        case ERROR_OPTION_PEDANTIC:
+            nob_cmd_append(cmd, "-Wall", "-Wextra", "-Wpedantic");
+            break;
+    }
 #endif
 }
 

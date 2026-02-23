@@ -398,6 +398,7 @@ enum RESULT compile_plug(bool force_rebuild, const char *source_dir, const char 
 	bool is_shared = true;
 	nob_cc_flags(&obj_cmd);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
+	nob_cmd_error(&obj_cmd, current_config.error);
 	get_include_directories(&obj_cmd);
 	enum RESULT obj_result = nob_cmd_process_source_dir(
 		&obj_cmd, source_dir, obj_dir, ".c", 
@@ -440,6 +441,7 @@ enum RESULT compile_test_dll(bool force_rebuild) {
 	bool is_shared = true;
 	nob_cc_flags(&obj_cmd);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
+	nob_cmd_error(&obj_cmd, current_config.error);
 	get_include_directories(&obj_cmd);
 	enum RESULT obj_result = nob_cmd_process_source_dir(
 		&obj_cmd, "test_dll/", OBJ_FOLDER "test_dll/", ".c", 
@@ -483,6 +485,7 @@ enum RESULT compile_load_library(bool force_rebuild, Nob_Cmd *link_cmd) {
 	// Object files
 	nob_cc_flags(&obj_cmd);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
+	nob_cmd_error(&obj_cmd, current_config.error);
 	get_include_directories(&obj_cmd);
 	enum RESULT obj_result = nob_cmd_process_source_dir(
 		&obj_cmd, SOURCE_FOLDER "load_library/", OBJ_FOLDER "load_library/", ".c", 
@@ -538,6 +541,7 @@ enum RESULT compile_os(bool force_rebuild, Nob_Cmd *link_cmd) {
 	// Object files
 	nob_cc_flags(&obj_cmd);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
+	nob_cmd_error(&obj_cmd, current_config.error);
 	get_include_directories(&obj_cmd);
 	enum RESULT obj_result = nob_cmd_process_source_dir(
 		&obj_cmd, SOURCE_FOLDER "os/", OBJ_FOLDER "os/", ".c", 
@@ -593,6 +597,7 @@ enum RESULT compile_plug_host(bool force_rebuild, Nob_Cmd *link_cmd) {
 	// Object files
 	nob_cc_flags(&obj_cmd);
 	nob_cmd_optimize(&obj_cmd, current_config.optimize);
+	nob_cmd_error(&obj_cmd, current_config.error);
 	get_include_directories(&obj_cmd);
 	enum RESULT obj_result = nob_cmd_process_source_dir(
 		&obj_cmd, SOURCE_FOLDER "plug_host/", OBJ_FOLDER "plug_host/", ".c", 
@@ -639,18 +644,19 @@ enum RESULT compile_main(bool force_rebuild, Nob_Cmd *link_cmd) {
 	enum RESULT result = SUCCESS;
 	size_t temp_checkpoint = nob_temp_save();
 	Nob_File_Paths file_list = {0};
-	Nob_Cmd main_obj_cmd = {0};
+	Nob_Cmd obj_cmd = {0};
 	Nob_Cmd main_cmd = {0};
 	
 	bool is_shared = false;
 	
-	nob_cc_flags(&main_obj_cmd);
-	get_target_defines(&main_obj_cmd);
-	get_include_raylib(&main_obj_cmd);
-	get_include_directories(&main_obj_cmd);
-	nob_cmd_optimize(&main_obj_cmd, current_config.optimize);
+	nob_cc_flags(&obj_cmd);
+	get_target_defines(&obj_cmd);
+	get_include_raylib(&obj_cmd);
+	get_include_directories(&obj_cmd);
+	nob_cmd_optimize(&obj_cmd, current_config.optimize);
+	nob_cmd_error(&obj_cmd, current_config.error);
 	enum RESULT obj_result = nob_cmd_process_source_dir(
-		&main_obj_cmd, SOURCE_FOLDER, OBJ_FOLDER "main/", ".c", 
+		&obj_cmd, SOURCE_FOLDER, OBJ_FOLDER "main/", ".c", 
 		current_config.is_debug, is_shared, force_rebuild);
 	
 	if (obj_result == FAILED) {
@@ -677,7 +683,7 @@ enum RESULT compile_main(bool force_rebuild, Nob_Cmd *link_cmd) {
 	}
 
 defer:
-	nob_cmd_free(main_obj_cmd);
+	nob_cmd_free(obj_cmd);
 	nob_cmd_free(main_cmd);
 	nob_da_free(file_list);
 	nob_temp_rewind(temp_checkpoint);
