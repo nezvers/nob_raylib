@@ -314,6 +314,14 @@ void nob_cmd_error(Nob_Cmd *cmd, enum ERROR_OPTION level) {
 #endif
 }
 
+void nob_cmd_include_direction(Nob_Cmd *cmd, const char *include_path) {
+#if _MSC_VER
+    nob_cmd_append(cmd, nob_temp_sprintf("/I%s", include_path));
+#else
+    nob_cmd_append(cmd, nob_temp_sprintf("-I%s", include_path));
+#endif
+}
+
 void nob_cmd_output_shared_object(Nob_Cmd *cmd, const char *src_path, const char *bin_path, bool debug) {
 #if defined(_MSC_VER)
 	// TODO: add missing MSVC flags
