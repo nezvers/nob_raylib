@@ -293,10 +293,11 @@ void get_target_defines(Nob_Cmd *cmd) {
 		nob_cmd_append(cmd, "-s", "TOTAL_MEMORY=67108864");
 		nob_cmd_append(cmd, "-s", "FORCE_FILESYSTEM=1");
 		nob_cmd_append(cmd, "--shell-file", "../minshell.html");
+		nob_cmd_define(cmd, "NDEBUG");
 	} else if (current_config.is_debug) {
 		// Debug symbols
 		nob_cmd_debug(cmd);
-		nob_cmd_append(cmd, "-DDEBUG");
+		nob_cmd_define(cmd, "DEBUG");
 		switch (current_config.platform) {
 			case (PLATFORM_DESKTOP):
 			case (PLATFORM_DESKTOP_GLFW):
@@ -307,7 +308,9 @@ void get_target_defines(Nob_Cmd *cmd) {
 		}
 	}
 	else{
-		nob_cmd_append(cmd, "-DRELEASE");
+		nob_cmd_define(cmd, "NDEBUG");
+		nob_cmd_define(cmd, "RELEASE");
+		nob_cmd_define(cmd, "MODE_PRODUCTION");
 		// nob_cmd_append(cmd, "-DMODE_PRODUCTION"); // disable adjust.h "passive" hotreload
 	}
 	nob_cmd_optimize(cmd, current_config.optimize);

@@ -192,6 +192,24 @@ void nob_cmd_debug(Nob_Cmd *cmd) {
 #endif
 }
 
+void nob_cmd_disable_assert(Nob_Cmd *cmd) {
+#if _MSC_VER
+	nob_cmd_append(cmd, "/DNDEBUG");
+#else
+	nob_cmd_append(cmd, "-DNDEBUG");
+#endif
+}
+
+void nob_cmd_define(Nob_Cmd *cmd, const char *define_text) {
+	const char *define;
+#if _MSC_VER
+	define = nob_temp_sprintf("/D%s", define_text);
+#else
+	define = nob_temp_sprintf("-D%s", define_text);
+#endif
+	nob_cmd_append(cmd, define);
+}
+
 void nob_cmd_link_lib(Nob_Cmd *cmd, const char *dir_path, const char *lib_name) {
 	// TODO: make it usable for general use. MSVC use Capital first letter for windows libs
 #if _MSC_VER
